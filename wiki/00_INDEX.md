@@ -29,6 +29,7 @@ You have some programming background (C/Python) and want to build a hardware-acc
 | 12 | [OV5647 MIPI Camera Path on the AXU2CGB](./12_OV5647_MIPI_CAMERA_PATH.md) | MIPI CSI-2 and D-PHY fundamentals, the OV5647 sensor, the AXU2CGB-E MIPI connector, Vivado MIPI CSI-2 Rx Subsystem IP, register bring-up, and ILA-based data path verification |
 || 13 | [Getting Started with Vitis on the ALINX Board](./13_VITIS_GETTING_STARTED.md) | Translated step-by-step guide from the ALINX Vitis tutorial Ch.1 — Vivado PS config, export XSA, Vitis app project, JTAG run/debug, and SD/QSPI boot-image creation |
 || 14 | [ALINX FPGA Course 1 (Translated)](./14_ALINX_FPGA_COURSE1.md) | Translated walkthrough of the entire ALINX FPGA tutorial (Course 1, 16 chapters) — ZYNQ arch, board hardware, Verilog building blocks, and PL experiments: LED, PLL, RAM, ROM, FIFO, keys, PWM, UART/RS232/RS422/RS485, HDMI, LCD |
+|| 15 | [Learning Path — Zero to MIPI Verification](./15_LEARNING_PATH.md) | Personalized minimal step-by-step plan for the AXU2CGB-E: which Course 1 chapters to actually build, what to skip, and how to run the mipi_verify modules to prove the OV5647 camera data path |
 
 ---
 
