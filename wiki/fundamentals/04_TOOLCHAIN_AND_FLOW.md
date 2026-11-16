@@ -71,54 +71,100 @@
 
 Every Vivado stage produces a checkpoint (`.dcp`) and opens a different view of your design. Knowing which view you're looking at, and what it tells you, is the key to not getting lost in the GUI.
 
-| Vivado step | What it does | What you can view after | What the view tells you |
-|-------------|--------------|------------------------|------------------------|
-| **Elaborated Design** (RTL Analysis) | Parses your Verilog, resolves parameters, builds the module hierarchy. No technology mapping yet. | **Schematic (RTL)** — a block diagram of your modules and how they connect. | "Did Vivado understand my Verilog the way I intended?" Shows the module hierarchy and interconnects, but not real gates. |
-| **I/O Ports** (part of Elaborated Design) | Lets you assign physical pins before synthesis. | **I/O Ports table** — every port with its Package Pin, IOSTANDARD, and drive strength. | "Which physical pin does each signal connect to?" This is where you type W13, Y12, etc. for LEDs. |
-| **Synthesis** | Maps your RTL to FPGA primitives (LUTs, FFs, BRAM, DSP48). Runs logic optimization. | **Schematic (gate-level)** — real gates, LUTs, and flip-flops, not abstract modules. | "What circuit did the synthesizer build from my code?" If you see 32 `FDRE` blocks for `timer_cnt`, your 32-bit counter inferred correctly. If you see a `LATCH` block, you have a bug. |
-| **Implementation (Place)** | Assigns each netlist cell to a physical site on the FPGA die. | **Device view (partially filled)** — your logic blocks appear on the chip floorplan. | "Where on the die did the placer put my logic?" Mostly useful for congestion analysis — if all your DSPs cluster in one corner, you may have routing congestion. |
-| **Implementation (Route)** | Programs the routing fabric to connect placed cells. | **Device view (with routing)** — wires appear connecting your placed cells. | "Are my signals routed?" Congested areas show as dense wire tangles. |
-| **Timing Analysis** (after Implementation) | Static timing analysis — checks every path meets setup/hold at the target clock. | **Timing Summary** — WNS (Worst Negative Slack), TNS (Total Negative Slack), critical paths. | "Will my design run at the clock I asked for?" WNS ≥ 0 means yes. WNS < 0 means no — you need to fix RTL or constraints. |
-| **Bitstream Generation** | Converts the placed-and-routed design into a `.bit` file. | No view — just a file. | The `.bit` is what you download to the FPGA. |
-| **Hardware Manager** (after JTAG download) | Downloads the bitstream to the FPGA and (optionally) attaches ILA. | **ILA waveform** — live signal captures from the running FPGA. | "Is my design actually working on hardware?" This is the only view that shows real-world behavior. |
+#### The Flow Navigator (left sidebar in Vivado)
 
-### How to tell which view you're in
+The Flow Navigator is the column of buttons on the left side of the Vivado window. It's the main menu for the design flow — you click top-to-bottom, and each button runs a stage and opens a view. Here's what every button does and what you see after clicking it:
+
+```
+┌──────────────────────────────────┐
+│  Flow Navigator                   │
+│                                   │
+│  ┌─────────────────────────────┐  │
+│  │ 1. Simulation               │  │  ← Run Simulation (behavioral)
+│  └─────────────────────────────┘  │
+│  ┌─────────────────────────────┐  │
+│  │ 2. RTL Analysis              │  │  ← Open Elaborated Design / Run Linter
+│  └─────────────────────────────┘  │
+│  ┌─────────────────────────────┐  │
+│  │ 3. Synthesis                 │  │  ← Run Synthesis → Open Synthesized Design
+│  └─────────────────────────────┘  │
+│  ┌─────────────────────────────┐  │
+│  │ 4. Implementation            │  │  ← Run Implementation → Open Implemented Design
+│  └─────────────────────────────┘  │
+│  ┌─────────────────────────────┐  │
+│  │ 5. Generate Bitstream         │  │  ← Write .bit file
+│  └─────────────────────────────┘  │
+│  ┌─────────────────────────────┐  │
+│  │ 6. Hardware Manager          │  │  ← Program FPGA + ILA debug
+│  └─────────────────────────────┘  │
+└──────────────────────────────────┘
+```
+
+| # | Flow Navigator button | What it runs | What you see after | What the view tells you |
+|---|------------------------|--------------|---------------------|-------------------------|
+| 1 | **Simulation** → Run Simulation | Behavioral simulation of your RTL against a testbench. No synthesis, no timing — purely "does the logic do what I want?" | **Waveform window** (XSim) — signals over simulation time. | "Does my logic produce the right outputs for the right inputs?" You add signals to the waveform, restart, run, and inspect. This is where you verify the LED counter actually counts to 24999999 and toggles. |
+| 2 | **RTL Analysis** → Open Elaborated Design (a.k.a. Run Linter) | Parses your Verilog, resolves parameters, builds the module hierarchy, and runs lint checks. **No technology mapping yet** — it's still abstract RTL, not gates. | **Schematic (RTL)** — a block diagram of your modules and how they connect, plus the **I/O Ports** table and **Messages** pane. | "Did Vivado understand my Verilog the way I intended?" The RTL Schematic shows the module hierarchy and interconnects. The Messages pane shows warnings (latches inferred, undriven signals, multi-driver nets). This is the cheapest place to catch bugs — fix them here before synthesis. |
+| 3 | **Synthesis** → Run Synthesis | Maps your RTL to FPGA primitives (LUTs, FFs, BRAM, DSP48). Runs logic optimization (constant folding, dead-code elimination, retiming). | **Schematic (gate-level)** — real LUTs, FFs, and gates, not abstract modules. Also: Utilization report, Synthesis log. | "What circuit did the synthesizer build from my code?" If you see 32 `FDRE` blocks for `timer_cnt`, your 32-bit counter inferred correctly. If you see a `LATCH` block, you have a combinational `always` that doesn't cover all cases. Check the Utilization report for LUT/FF/BRAM/DSP counts. |
+| 4 | **Implementation** → Run Implementation | Two sub-steps: **Place** (assign each netlist cell to a physical site on the die) then **Route** (program the routing fabric to connect them). Then runs **Static Timing Analysis**. | **Device view** (the FPGA floorplan, now filled with your placed logic and routing), **Timing Summary** (WNS/TNS/critical paths), **Utilization report** (final). | "Where on the die did the placer put my logic, and will it run at my target clock?" WNS ≥ 0 means timing met. WNS < 0 means it won't — you need to fix RTL, constraints, or implementation strategy. The Device view shows congestion (dense wire tangles = bad). |
+| 5 | **Generate Bitstream** | Converts the placed-and-routed design into a `.bit` file (for JTAG) or `.bin` (for flash). | No view — just a file and a "Bitstream Generation Completed" dialog. | The `.bit` is what you download to the FPGA. If this succeeds, your design is physically realizable on this chip. |
+| 6. | **Hardware Manager** → Open Target → Auto Connect → Program Device | Downloads the bitstream to the FPGA via JTAG. Optionally attaches ILA for live signal capture. | **ILA Dashboard** — live waveform captures from the running FPGA. | "Is my design actually working on real hardware?" This is the only view that shows real-world behavior. Trigger on `tvalid`, `tuser`, etc. and watch the actual signals. |
+
+#### The typical order (and when to skip)
+
+You don't have to run every step every time. Here's the practical order for different goals:
+
+| Goal | Run these | Skip |
+|------|-----------|------|
+| **Verify logic only** (no hardware) | 1. Simulation | Everything else |
+| **Check Verilog compiles + lint** | 2. RTL Analysis | Synthesis, Implementation, Bitstream |
+| **Check it fits on the chip** | 2 → 3. Synthesis | Implementation, Bitstream |
+| **Check timing meets target** | 2 → 3 → 4. Implementation | Bitstream, Hardware Manager |
+| **Run on real hardware** | 2 → 3 → 4 → 5 → 6. All steps | None |
+| **Debug on hardware** | All steps + add ILA before synthesis | None |
+
+For your LED bring-up without a JTAG cable: just run **step 1 (Simulation)**. That verifies the logic without any hardware. When you get a JTAG cable, run the full flow 2 → 6.
+
+#### How to tell which view you're in
 
 Vivado changes the active view based on which design is open. Look at the dropdown at the top of the main window:
 
-| Dropdown says | You're viewing | After which step |
-|---------------|----------------|------------------|
-| **Schematic** (RTL) | Module-level block diagram | Elaborated Design |
-| **Schematic** (gate-level) | LUTs, FFs, gates | Open Synthesized Design |
-| **Device** | FPGA floorplan | Open Synthesized Design (empty) or Open Implemented Design (filled) |
-| **I/O Ports** | Pin assignment table | Elaborated Design or Open Synthesized Design |
-| **Timing Summary** | STA reports | Open Implemented Design |
+| Dropdown says | You're viewing | After which Flow Navigator step |
+|---------------|----------------|----------------------------------|
+| **Schematic** (RTL) | Module-level block diagram | RTL Analysis (Open Elaborated Design) |
+| **Schematic** (gate-level) | LUTs, FFs, gates | Synthesis (Open Synthesized Design) |
+| **Device** | FPGA floorplan | Synthesis (empty) or Implementation (filled) |
+| **I/O Ports** | Pin assignment table | RTL Analysis or Synthesis |
+| **Timing Summary** | STA reports | Implementation (Open Implemented Design) |
 | **ILA Dashboard** | Live hardware waveforms | Hardware Manager |
+| **Waveform** (XSim) | Simulation signals over time | Simulation |
 
-### The mental model
+#### The mental model
 
 ```
 Your Verilog code
       │
-      ▼  (Elaborate)
-RTL Schematic      ← "did you understand my code?"
+      ▼  (1. Simulation)
+Waveform            ← "does my logic produce the right outputs?"
       │
-      ▼  (Synthesize)
+      ▼  (2. RTL Analysis)
+RTL Schematic       ← "did you understand my code?" + lint warnings
+      │
+      ▼  (3. Synthesis)
 Gate-level Schematic  ← "what circuit did you build from my code?"
       │
-      ▼  (Place)
+      ▼  (4. Implementation: Place)
 Device view (placed)  ← "where on the chip did you put my circuit?"
       │
-      ▼  (Route)
+      ▼  (4. Implementation: Route)
 Device view (routed)  ← "how did you wire it up?"
       │
-      ▼  (Timing)
+      ▼  (4. Implementation: Timing)
 Timing Summary      ← "will it run at my target clock speed?"
       │
-      ▼  (Bitstream)
+      ▼  (5. Generate Bitstream)
 .bit file           ← "the thing I download to the FPGA"
       │
-      ▼  (Program + ILA)
+      ▼  (6. Hardware Manager + ILA)
 ILA waveform        ← "is it actually working on real hardware?"
 ```
 
