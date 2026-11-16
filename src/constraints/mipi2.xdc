@@ -5,7 +5,16 @@
 #
 #  Sources:
 #    - ALINX AXU2CGB-E User Manual Figure 15 (MIPI Interface J24 Pin Assignment)
-#    - Confirmed from pin table image (J24 15-pin FPC)
+#    - Official ALINX mipi.xdc (cam1_* entries):
+#      https://github.com/alinxalinx/AXU2CGA_AXU2CGB/blob/master/vivado/
+#      auto_create_project/src/constraints/mipi.xdc
+#
+#  NAMING NOTE
+#  -----------
+#  The official ALINX mipi.xdc uses cam1_gpio[0], cam1_i2c_scl_io,
+#  cam1_i2c_sda_io (bidirectional _io suffix from AXI IIC IP) for J24.
+#  This file uses cam2_gpio, cam2_scl, cam2_sda to match our block design.
+#  Adjust port names here if you switch to the AXI IIC IP style.
 #
 #  USAGE
 #  -----
@@ -81,6 +90,13 @@ set_property PACKAGE_PIN AC14 [get_ports cam2_clk]
 set_property PACKAGE_PIN AD14 [get_ports cam2_scl]
 set_property PACKAGE_PIN AC13 [get_ports cam2_sda]
 set_property IOSTANDARD LVCMOS33 [get_ports {cam2_gpio cam2_clk cam2_scl cam2_sda}]
+
+# Pull-ups confirmed in official ALINX mipi.xdc — required for open-drain
+# SCCB/I2C lines. Pi V1 camera module has on-board 1.5 kΩ pull-ups but
+# enabling the FPGA's weak pull-up adds no harm and helps if they are absent.
+set_property PULLUP true [get_ports cam2_gpio]
+set_property PULLUP true [get_ports cam2_scl]
+set_property PULLUP true [get_ports cam2_sda]
 
 # cam2_clk is a clock output driven by the Clocking Wizard — mark it as a
 # generated clock so the timing engine tracks it correctly.

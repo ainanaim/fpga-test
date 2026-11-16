@@ -340,6 +340,27 @@ Source: ALINX AXU2CGA/B User Manual Part 14, verified against official `mipi.xdc
 | 14 | CAM1_SDA | IO_L4P_24 | AE13 | SCCB / I2C data |
 | 15 | VCC_3V3 | — | — | 3.3 V power to camera module |
 
+### Comparison with official ALINX mipi.xdc
+
+Source: [`alinxalinx/AXU2CGA_AXU2CGB` → `vivado/auto_create_project/src/constraints/mipi.xdc`](https://github.com/alinxalinx/AXU2CGA_AXU2CGB/blob/master/vivado/auto_create_project/src/constraints/mipi.xdc)
+
+| Item | Official repo | Our mipi1.xdc | Status |
+|------|--------------|---------------|--------|
+| GPIO pin | AH14 | AH14 | ✅ match |
+| SCL pin | AH13 | AH13 | ✅ match |
+| SDA pin | AE13 | AE13 | ✅ match |
+| IOSTANDARD | LVCMOS33 | LVCMOS33 | ✅ match |
+| `PULLUP true` on SCL/SDA/GPIO | ✅ present | ✅ added | ✅ synced |
+| XCLK pin (AG13) | not in official file | ✅ present | added by us |
+| Differential pair pins | not in official file | ✅ present | added by us — IP manages IOSTANDARD |
+| Port naming | `cam0_gpio[0]`, `cam0_i2c_scl_io` | `cam1_gpio`, `cam1_scl` | different style — see note below |
+
+**Why the official file has no differential pair pins:** The MIPI CSI-2 Rx Subsystem IP (PG232) auto-generates IOSTANDARD constraints for the D-PHY differential pairs itself. You only provide `PACKAGE_PIN`. Our XDC has them for completeness.
+
+**Port naming difference:** The official uses `cam0_i2c_scl_io` / `cam0_i2c_sda_io` (the `_io` suffix and bidirectional style comes from the AXI IIC IP). Our XDC uses `cam1_scl` / `cam1_sda` for the PS EMIO I2C0 style. If you use the AXI IIC IP instead of PS EMIO, rename ports to match.
+
+**Why PULLUP matters:** The SCCB/I2C lines are open-drain. Without a pull-up, the lines float high only via the camera module's on-board resistors (1.5 kΩ on Pi V1). The FPGA's internal weak pull-up adds an extra path to VCC and reduces the chance of a floating line if the resistors are marginal. The official ALINX file enables it on GPIO too.
+
 ### J24 pin assignment — MIPI2 (reference only)
 
 | J24 pin | Signal name | ZYNQ pin # | Description |
@@ -405,29 +426,44 @@ On the AXU2CGB, derive these from the PS `FCLK0` (e.g. 100 MHz) through a PL Clo
 
 ### I/O constraints (XDC)
 
-You must constrain the MIPI lane pins in the XDC file. The exact pin numbers come from the ALINX schematic (BANK65). Example structure (pin names are placeholders — look up the real ones):
+The complete, confirmed constraints are in [`src/constraints/mipi1.xdc`](../../src/constraints/mipi1.xdc).
+The key sections are shown below.
+
+**Important:** do NOT set `IOSTANDARD` for the differential D-PHY pairs here.
+The MIPI CSI-2 Rx Subsystem IP (PG232) auto-generates those constraints itself.
+Only `PACKAGE_PIN` is needed for the differential ports. Setting `LVDS` manually
+in the user XDC conflicts with the IP and causes a DRC error.
 
 ```tcl
-# MIPI CSI-2 clock lane (differential pair)
-set_property PACKAGE_PIN <pin_clk_p>  [get_ports {mipi_clk_p}]
-set_property PACKAGE_PIN <pin_clk_n>  [get_ports {mipi_clk_n}]
-set_property IOSTANDARD  LVDS         [get_ports {mipi_clk_p}]
-set_property IOSTANDARD  LVDS         [get_ports {mipi_clk_n}]
+# ── PL reference clock (25 MHz) ──────────────────────────────────────────────
+set_property PACKAGE_PIN AB11 [get_ports pl_ref_clk]
+set_property IOSTANDARD  LVCMOS33 [get_ports pl_ref_clk]
+create_clock -period 40.000 -name pl_ref_clk -waveform {0.000 20.000} \
+    [get_ports pl_ref_clk]
 
-# MIPI CSI-2 data lane 0 (differential pair)
-set_property PACKAGE_PIN <pin_d0_p>   [get_ports {mipi_d0_p}]
-set_property PACKAGE_PIN <pin_d0_n>   [get_ports {mipi_d0_n}]
-set_property IOSTANDARD  LVDS         [get_ports {mipi_d0_p}]
-set_property IOSTANDARD  LVDS         [get_ports {mipi_d0_n}]
+# ── MIPI1 J23  D-PHY differential pairs — BANK64 (HP, 1.2 V) ────────────────
+# IOSTANDARD is NOT set here — the MIPI CSI-2 Rx Subsystem IP manages it.
+set_property PACKAGE_PIN AC9 [get_ports mipi_phy_if_clk_p]       ;# J23 pin 9
+set_property PACKAGE_PIN AD9 [get_ports mipi_phy_if_clk_n]       ;# J23 pin 8
+set_property PACKAGE_PIN AE9 [get_ports {mipi_phy_if_data_p[0]}] ;# J23 pin 3
+set_property PACKAGE_PIN AE8 [get_ports {mipi_phy_if_data_n[0]}] ;# J23 pin 2
+set_property PACKAGE_PIN AB8 [get_ports {mipi_phy_if_data_p[1]}] ;# J23 pin 6
+set_property PACKAGE_PIN AC8 [get_ports {mipi_phy_if_data_n[1]}] ;# J23 pin 5
 
-# MIPI CSI-2 data lane 1 (differential pair)
-set_property PACKAGE_PIN <pin_d1_p>   [get_ports {mipi_d1_p}]
-set_property PACKAGE_PIN <pin_d1_n>   [get_ports {mipi_d1_n}]
-set_property IOSTANDARD  LVDS         [get_ports {mipi_d1_p}]
-set_property IOSTANDARD  LVDS         [get_ports {mipi_d1_n}]
+# ── CAM1 control signals — BANK24 (3.3 V) ────────────────────────────────────
+# Pin numbers confirmed from AXU2CGA/B user manual Part 14 and
+# official ALINX mipi.xdc (cam0_* entries).
+set_property PACKAGE_PIN AH14 [get_ports cam1_gpio]  ;# J23 pin 11
+set_property PACKAGE_PIN AG13 [get_ports cam1_clk]   ;# J23 pin 12 — XCLK to OV5647
+set_property PACKAGE_PIN AH13 [get_ports cam1_scl]   ;# J23 pin 13 — SCCB SCL
+set_property PACKAGE_PIN AE13 [get_ports cam1_sda]   ;# J23 pin 14 — SCCB SDA
+set_property IOSTANDARD LVCMOS33 [get_ports {cam1_gpio cam1_clk cam1_scl cam1_sda}]
+
+# Pull-ups confirmed in official ALINX mipi.xdc — required for open-drain SCCB.
+set_property PULLUP true [get_ports cam1_gpio]
+set_property PULLUP true [get_ports cam1_scl]
+set_property PULLUP true [get_ports cam1_sda]
 ```
-
-The IOSTANDARD for MIPI D-PHY on UltraScale+ HP banks is typically `LVDS` or a MIPI-specific standard — PG232 specifies the exact one. The IP may also require `IODELAY` constraints for deskew; the IP documentation provides the constraint template.
 
 ### What the IP outputs
 
@@ -584,31 +620,28 @@ Electrically and protocol-wise it is I²C. The Linux `i2c` subsystem drives it a
 
 The MIPI1 connector's SCCB lines (SDA, SCL) land on **BANK24** at 3.3 V (confirmed from J23 pin table — `cam1_scl` = AH13, `cam1_sda` = AE13). To drive them from the PS:
 
-1. **Enable a PS I²C controller** in the Vivado Zynq PS block configuration — use **I2C1**.
+1. **Enable a PS I²C controller** in the Vivado Zynq PS block configuration — use **I2C0** (confirmed: bus 0 on this board).
 2. **Route the I²C signals to EMIO** (not MIO) — because the SCCB pins are on PL I/O (BANK24), not MIO pins. EMIO extends the PS I²C controller through the PL to package pins.
 3. In `mipi1.xdc`, the EMIO I²C SCL/SDA are already constrained to AH13/AE13 on BANK24.
 
 ### Finding the sensor: i2cdetect
 
-Once PetaLinux or your baremetal app has started and the sensor has XCLK running, use these commands to confirm the sensor is responding on the I²C bus.
+> **Confirmed for this board:** OV5647 on MIPI1 J23 appears on **i2c-0** (`i2cdetect -y -r 0`).
 
-**Step 1 — find which bus number the EMIO I2C1 is on:**
+**Step 1 — list buses (for reference):**
 ```bash
 i2cdetect -l
 ```
-Output looks like:
 ```
-i2c-0   i2c         ff020000.i2c                    I2C adapter
-i2c-1   i2c         ff030000.i2c                    I2C adapter   <- likely I2C1 EMIO
-i2c-2   i2c         ...
+i2c-0   i2c         ff020000.i2c                    I2C adapter   ← OV5647 is here
+i2c-1   i2c         ff030000.i2c                    I2C adapter
 ```
-The EMIO I2C1 is usually `i2c-1` or `i2c-2`. Try each one.
 
-**Step 2 — scan for the OV5647 (should be at 0x36):**
+**Step 2 — scan bus 0 for the OV5647 ✅ confirmed:**
 ```bash
-i2cdetect -y -r 1
+i2cdetect -y -r 0
 ```
-You'll see a grid. The OV5647 appears at address **36**:
+The OV5647 appears at address **36**:
 ```
      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
 00:          -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -616,19 +649,19 @@ You'll see a grid. The OV5647 appears at address **36**:
 30: -- -- -- -- -- -- 36 -- -- -- -- -- -- -- -- --
 ...
 ```
-If nothing appears: XCLK is not running (check `cam1_clk` Clocking Wizard output), or the ribbon cable is not seated, or the wrong bus number.
+If nothing appears: XCLK is not running, the ribbon cable is not seated, or the sensor has no power (check VCC_3V3 on pin 15).
 
-**Step 3 — verify chip ID (the definitive "it's an OV5647" check):**
+**Step 3 — verify chip ID (run this next to confirm it's OV5647 and not another sensor):**
 
-OV5647 uses 16-bit register addresses, so use `i2ctransfer` instead of `i2cget`:
+OV5647 uses 16-bit register addresses, so use `i2ctransfer` (not `i2cget`):
 ```bash
 # Register 0x300A = chip ID high byte → should return 0x56
-i2ctransfer -y 1 w2@0x36 0x30 0x0a r1
+i2ctransfer -y 0 w2@0x36 0x30 0x0a r1
 
 # Register 0x300B = chip ID low byte → should return 0x47
-i2ctransfer -y 1 w2@0x36 0x30 0x0b r1
+i2ctransfer -y 0 w2@0x36 0x30 0x0b r1
 ```
-`0x56` + `0x47` = `"VG"` in ASCII = **OV5647** confirmed. If you get `0xFF` or an error, the sensor is not responding — recheck power (VCC_3V3 on pin 15), XCLK, and ribbon orientation.
+`0x56` + `0x47` = `"VG"` in ASCII = **OV5647** confirmed. If you get `0xFF`, the sensor is not responding — recheck XCLK and ribbon orientation.
 
 ### Pull-ups
 
@@ -699,8 +732,8 @@ The minimal block design to verify the MIPI data path:
    - **PL Fabric Clocks**: FCLK0 = 100 MHz.
    - **PS-PL Interfaces → Master AXI HPM0 FPD**: enable (for MIPI IP register access from PS).
 4. Still in the Zynq config → **I/O Configuration → I/O Peripherals → I2C**:
-   - Enable **I2C1** → route to **EMIO** (not MIO — the SCCB pins are on PL BANK24, not MIO).
-   - This exposes `iic_1` ports on the block design which you'll connect to `cam1_scl`/`cam1_sda` through top-level ports.
+   - Enable **I2C0** → route to **EMIO** (not MIO — the SCCB pins are on PL BANK24, not MIO).
+   - This exposes `iic_0` ports on the block design which you'll connect to `cam1_scl`/`cam1_sda` through top-level ports.
 5. Click OK.
 
 #### C. Add the Clocking Wizard
@@ -754,7 +787,7 @@ The minimal block design to verify the MIPI data path:
 #### G. Add the XCLK and I2C output ports
 
 1. Add output port `cam1_clk` (1-bit output). Connect to `clk_out3` (24 MHz) through a Utility Buffer (OBUF).
-2. Add output port `cam1_scl`, `cam1_sda` — connect to the Zynq `IIC1_SCL_O` / `IIC1_SDA_O` EMIO outputs.
+2. Add output port `cam1_scl`, `cam1_sda` — connect to the Zynq `IIC0_SCL_O` / `IIC0_SDA_O` EMIO outputs.
 3. Add output port `cam1_gpio` — tie to `1` for now (holds camera out of reset).
 
 #### H. Validate and generate
@@ -825,7 +858,7 @@ In `src/main.c` of the `ov5647_init` app:
 #include "xil_printf.h"
 #include "sleep.h"
 
-#define IIC_DEVICE_ID   XPAR_XIICPS_1_DEVICE_ID   // I2C1 → EMIO → cam1_scl/sda
+#define IIC_DEVICE_ID   XPAR_XIICPS_0_DEVICE_ID   // I2C0 → EMIO → cam1_scl/sda (confirmed: bus 0)
 #define OV5647_ADDR     0x36                        // 7-bit I2C address
 
 static XIicPs iic;
@@ -930,7 +963,7 @@ Replace the `main.c` from step N with this version — it streams live stats to 
 // Check xparameters.h after export — IDs may differ
 #define GPIO_FRAME_ID   XPAR_AXI_GPIO_0_DEVICE_ID
 #define GPIO_PIXEL_ID   XPAR_AXI_GPIO_1_DEVICE_ID
-#define IIC_DEVICE_ID   XPAR_XIICPS_1_DEVICE_ID
+#define IIC_DEVICE_ID   XPAR_XIICPS_0_DEVICE_ID   // I2C0, confirmed bus 0 on this board
 #define OV5647_ADDR     0x36
 
 static XGpio  gpio_frame, gpio_pixel;
