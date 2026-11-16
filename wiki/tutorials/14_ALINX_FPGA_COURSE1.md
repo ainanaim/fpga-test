@@ -2,7 +2,7 @@
 
 > A translated, condensed English guide based on **ALINX ZYNQ MPSoC Development Platform FPGA Tutorial V1.03**
 > (Chinese, 174 pages, 16 chapters, author 梅士清, 2021-03-15).
-> Source PDF: `course_s1_ALINX_ZYNQ_MPSoC开发平台FPGA教程V1.03.pdf`
+> Source PDF: [`course_s1_ALINX_ZYNQ_MPSoC开发平台FPGA教程V1.03.pdf`](../../resources/tutorial(cn)/course_s1_ALINX_ZYNQ_MPSoC开发平台FPGA教程V1.03.pdf)
 >
 > This is **Course 1** — the PL/FPGA side. It assumes no prior FPGA experience and walks from the ZYNQ architecture
 > through Verilog fundamentals, the Vivado tool flow, and a series of hands-on PL experiments (LED, PLL, RAM, ROM,
@@ -341,20 +341,145 @@ updates `led.xdc` with a `create_clock` entry.
 antivirus software can block the build.
 
 ### 4.7 Simulation (behavioral)
-1. **Simulation Settings** → set simulation runtime (e.g. 50 ms).
-2. **Add Sources → Add or create simulation sources** → create `vtf_led_test.v`.
-3. Write the testbench: instantiate `led`, drive `sys_clk` (period 20 ns = 50 MHz in sim) and `rst_n`.
+
+You **must** have a testbench (`*_tb.v`) to simulate. Without it, Vivado has nothing to drive `sys_clk` and `rst_n`, so the waveform is just flat lines.
+
+#### 4.7.1 Why the waveform is empty without a testbench
+
+When you click **Run Simulation** with only `led.v` in the project:
+- Vivado looks for a top-level simulation source.
+- If there's no testbench, it may try to simulate `led.v` directly — but `led.v` has `input sys_clk` and `input rst_n` that nobody is driving.
+- With no clock toggling, `timer_cnt` never increments, `led` never toggles, the waveform is flat lines.
+
+#### 4.7.2 Create the testbench file
+
+1. In the **Sources** panel (left side), right-click **Simulation Sources** → **Add Sources**.
+2. Select **Add or create simulation sources** → Next.
+3. Click **Create File** → name it `vtf_led_test` → set file type to **Verilog** → OK → Finish.
+
+#### 4.7.3 Write the testbench
+
+Open `vtf_led_test.v` and paste:
+
 ```verilog
 `timescale 1 ns / 1 ps
+
 module vtf_led_test;
-  reg sys_clk, rst_n; wire [3:0] led;
-  initial begin sys_clk=0; rst_n=0; #1000; rst_n=1; end
-  always #20 sys_clk = ~sys_clk;
-  led uut(.sys_clk(sys_clk), .rst_n(rst_n), .led(led));
+
+    // Inputs to the DUT (Device Under Test)
+    reg  sys_clk;
+    reg  rst_n;
+
+    // Output from the DUT
+    wire [3:0] led;
+
+    // Instantiate the led module
+    led uut (
+        .sys_clk (sys_clk),
+        .rst_n   (rst_n),
+        .led     (led)
+    );
+
+    // Generate a 25 MHz clock (40 ns period = 20 ns half period)
+    initial begin
+        sys_clk = 1'b0;
+        forever #20 sys_clk = ~sys_clk;   // toggles every 20 ns
+    end
+
+    // Reset sequence
+    initial begin
+        rst_n = 1'b0;          // assert reset (active-low)
+        #1000;                 // hold reset for 1000 ns
+        rst_n = 1'b1;          // release reset
+    end
+
 endmodule
 ```
-4. **Run Simulation → Run Behavioral Simulation**. Add `timer_cnt` to the waveform (Scope → uut → right-click
-   `timer` → Add to Wave). **Restart** then **Run All**. Confirm `led` toggles to `0xf` at the count threshold.
+
+> The `always #20 sys_clk = ~sys_clk;` line creates a 50 MHz clock in simulation (20 ns half period). The real board clock is 25 MHz (40 ns period). For logic verification this doesn't matter — the counter still counts to 24999999 and toggles. If you want the simulation to match real time exactly, use `#40` instead of `#20`.
+
+#### 4.7.4 Set the testbench as the simulation top
+
+1. In the Sources panel, under **Simulation Sources → sim_1**, find `vtf_led_test.v`.
+2. Right-click it → **Set as Top** (if not already set automatically).
+3. The testbench should now be the top-level for simulation, not `led.v`.
+
+#### 4.7.5 Run the simulation
+
+1. Click **Run Simulation → Run Behavioral Simulation**.
+2. XSim opens with the waveform window.
+3. You'll see `sys_clk` toggling, `rst_n` going high after 1000 ns, and `led` + `timer_cnt` (if you add it).
+
+#### 4.7.6 Add signals to the waveform
+
+If `timer_cnt` isn't visible:
+1. In the **Scope** panel (left side of XSim), expand `vtf_led_test → uut (led)`.
+2. Drag `timer_cnt` into the waveform window.
+3. Right-click it → **Radix → Unsigned** (so it shows as a number, not hex).
+4. Click **Restart** (the circular arrow icon).
+5. Click **Run All** (or set a specific time).
+
+#### 4.7.7 What you should see
+
+| Time (sim) | What happens |
+|------------|--------------|
+| 0 ns | `sys_clk` starts toggling, `rst_n = 0` (reset held) |
+| 1000 ns | `rst_n = 1` (reset released), `timer_cnt` starts counting from 0 |
+| ~1 s | `timer_cnt` reaches 24999999, `led` toggles to `0xf` |
+| ~2 s | `timer_cnt` reaches 24999999 again, `led` toggles to `0x0` |
+
+#### 4.7.8 The catch — simulation time
+
+Your counter counts to 24999999 at 25 MHz. That's **1 second of real time**. In simulation, 1 second = 25 million clock cycles = 25,000,000 × 40 ns = **1 second of simulation time**. XSim will take a while to simulate that many cycles.
+
+**To see results faster — reduce the counter for simulation.** Temporarily change the counter in `led.v` from `24999999` to `249` (or even `24`) just for simulation:
+
+```verilog
+// For simulation only — change back to 24999999 for real hardware
+else if(timer_cnt >= 32'd249)   // 10 microseconds at 25 MHz
+```
+
+Now `led` toggles every 10 microseconds of simulation time — you'll see it instantly. Change it back to `24999999` before generating the bitstream for the real board.
+
+#### 4.7.9 Better — use a parameter so you don't modify led.v
+
+If your `led.v` uses a parameter for the counter max:
+
+```verilog
+module led #(parameter MAX = 24999999) (
+    input sys_clk,
+    input rst_n,
+    output reg [3:0] led
+);
+    reg [31:0] timer_cnt;
+    always @(posedge sys_clk or negedge rst_n) begin
+        if (!rst_n) begin
+            led <= 4'd0;
+            timer_cnt <= 32'd0;
+        end
+        else if (timer_cnt >= MAX) begin
+            led <= ~led;
+            timer_cnt <= 32'd0;
+        end
+        else begin
+            led <= led;
+            timer_cnt <= timer_cnt + 32'd1;
+        end
+    end
+endmodule
+```
+
+Then in the testbench, override the parameter:
+
+```verilog
+led #(.MAX(249)) uut (   // 10 us toggle for fast simulation
+    .sys_clk (sys_clk),
+    .rst_n   (rst_n),
+    .led     (led)
+);
+```
+
+This way you don't modify `led.v` — the testbench sets a small `MAX` for simulation, and the real hardware uses the default `24999999`.
 
 ### 4.8 Download via JTAG
 1. Connect JTAG, power on, set boot-mode switch to **JTAG** (all ON).

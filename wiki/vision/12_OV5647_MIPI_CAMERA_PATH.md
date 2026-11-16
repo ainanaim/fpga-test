@@ -310,28 +310,45 @@ Between packets, the lanes return to LP state. The clock lane may keep running o
 
 ## 6. The AXU2CGB-E MIPI Connector
 
-From the ALINX AXU2CGB-E user manual (Part 3.11):
+From the ALINX AXU2CGB-E user manual (Part 3.11), **confirmed against the J24 pin assignment table**:
 
 | Parameter | Value |
 |-----------|-------|
-| Connector | 15-pin FPC (flat flexible cable) |
-| Data lanes | 2 |
-| Clock lane | 1 pair |
-| Differential I/O bank | **BANK65** (HP, 1.2 V) |
-| Control signal bank | **BANK43** (3.3 V) — SCCB, power enable, etc. |
-| Designed for | ALINX AN5641 module (MIPI OV5640) |
+| Connector | 15-pin FPC (flat flexible cable), connector J24 |
+| Data lanes | 2 (lane 0 and lane 1) |
+| Clock lane | 1 differential pair |
+| Differential I/O bank | **BANK65** (HP, 1.2 V) — data and clock lanes |
+| Control signal bank | **BANK24** (3.3 V) — XCLK, SCCB SCL/SDA, GPIO |
+| 3.3 V power | Pin 15 (VCC_3V3) |
 
-### Ribbon cable pinout compatibility
+### Confirmed J24 pin assignment (AXU2CGB-E user manual, Figure 15)
 
-The 15-pin FPC form factor is standard, but the **pin assignment** (which pin is CLK+, which is D0-, etc.) varies between manufacturers. The Raspberry Pi V1 camera (OV5647) and the ALINX AN5641 (OV5640) may use different pinouts.
+| J24 pin | Signal name | ZYNQ pin name | ZYNQ pin # | Description |
+|---------|-------------|---------------|------------|-------------|
+| 1 | GND | — | — | Ground |
+| 2 | MIPI2_LAN0_N | IO_L2N_65 | V9 | Data lane 0 − |
+| 3 | MIPI2_LAN0_P | IO_L2P_65 | U9 | Data lane 0 + |
+| 4 | GND | — | — | Ground |
+| 5 | MIPI2_LAN1_N | IO_L3N_65 | V8 | Data lane 1 − |
+| 6 | MIPI2_LAN1_P | IO_L3P_65 | U8 | Data lane 1 + |
+| 7 | GND | — | — | Ground |
+| 8 | MIPI2_CLK_N | IO_L1N_65 | Y8 | D-PHY clock lane − |
+| 9 | MIPI2_CLK_P | IO_L1P_65 | W8 | D-PHY clock lane + |
+| 10 | GND | — | — | Ground |
+| 11 | CAM2_GPIO | IO_L5P_24 | AD15 | Camera enable / GPIO |
+| 12 | CAM2_CLK | IO_L6P_24 | AC14 | **XCLK output to OV5647** (drive at 24 MHz) |
+| 13 | CAM2_SCL | IO_L5N_24 | AD14 | SCCB / I2C clock |
+| 14 | CAM2_SDA | IO_L6N_24 | AC13 | SCCB / I2C data |
+| 15 | VCC_3V3 | — | — | 3.3 V power to camera module |
 
-**Before connecting any camera to the AXU2CGB-E MIPI connector:**
-1. Obtain the ALINX AXU2CGB-E MIPI connector pinout from the schematic (Figure 3-11-1 in the user manual, or the `AXU2CGB/hardware_axu2cgb` GitHub repo).
-2. Obtain your camera module's 15-pin FPC pinout.
-3. Compare pin-by-pin: CLK+, CLK-, D0+, D0-, D1+, D1-, SDA, SCL, power, GND, enable.
-4. If they differ, use a pinout adapter board. Do not plug a mismatched ribbon directly into the connector — at best you get no data; at worst you short power into a data lane.
+> The XDC constraints for all these pins are in [`src/constraints/mipi2.xdc`](../../src/constraints/mipi2.xdc).
 
-If your module is an ALINX AN5641-style board, the pinout matches by design. If it is a Raspberry Pi V1 camera, verify before connecting.
+### XCLK — confirmed present on pin 12 ✅
+
+**Pin 12 (CAM2_CLK, AC14, IO_L6P_24, BANK24) is the XCLK line.**
+The board routes a PL output pin to the camera's XCLK input. You must drive AC14 at 24 MHz from a Clocking Wizard output — the OV5647 will not respond on SCCB until XCLK is running.
+
+In the block design, the Clocking Wizard (25 MHz PL ref → 24 MHz) output connects through an OBUF to the `cam2_clk` top-level port.
 
 ### Power considerations
 
@@ -340,15 +357,7 @@ The OV5647 needs three supply rails:
 - **2.8 V analog** — generated on the camera module
 - **1.8 V I/O** — the MIPI lane I/O voltage; the AXU2CGB-E provides 1.2 V on BANK65, which is within the D-PHY common-mode range
 
-The Pi V1 camera module takes 3.3 V from the ribbon and generates 1.5 V and 2.8 V on-board. Verify that the AXU2CGB-E MIPI connector provides 3.3 V on the correct pin.
-
-### XCLK — the sensor input clock
-
-The OV5647 needs an external input clock (XCLK) on the `XCLK` pin, typically 24 MHz. Sources:
-- **On-board oscillator on the camera module** — some modules have their own crystal. The Pi V1 module does **not** — it expects XCLK from the SoC.
-- **FPGA PL clock output** — drive a 24 MHz clock from a PL MMCM/PLL out through a pin routed to the XCLK pin on the FPC connector. Check the ALINX schematic for whether the MIPI connector routes an XCLK pin to a PL output.
-
-If the AXU2CGB-E does not route an XCLK pin, and your module has no on-board oscillator, you must add one (or modify the module). This is a common gotcha — verify before assuming the sensor will start.
+The Pi V1 camera module takes 3.3 V from pin 15 of the ribbon (VCC_3V3) and generates 1.5 V and 2.8 V on-board.
 
 ---
 
@@ -626,24 +635,200 @@ The minimal block design to verify the MIPI data path:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Steps in Vivado
+### Step-by-step: Vivado block design
 
-1. **Create a new project** targeting `xczu2cg-sfvc784e-1-e` (verify the exact part/speed/package from your board).
-2. **Create a block design**. Add the **Zynq UltraScale+ MPSoC** IP. Configure:
-   - PS I²C (I2C0 or I2C1) routed to EMIO.
-   - FCLK0 = 100 MHz (your main fabric clock).
-   - M_AXI_HPM0_FPD enabled (master to PL, for IP register access).
-3. **Add the MIPI CSI-2 Receiver Subsystem** IP. Configure:
-   - 2 lanes, RAW10 (or RAW8 for simpler bring-up), D-PHY LVDS mode.
-   - AXI-Lite clock = 100 MHz.
-   - Connect its AXI-Lite slave to the AXI Interconnect from `M_AXI_HPM0_FPD`.
-   - Connect its clocking inputs to the Clocking Wizard outputs (video clock, D-PHY ref clock — check PG232 for exact frequencies).
-4. **Add a Clocking Wizard** to generate the IP's required clocks from FCLK0.
-5. **Add an AXI4-Stream Data FIFO** on the MIPI Rx output — buffers the stream and provides `tready` handling.
-6. **Add an ILA (Integrated Logic Analyzer)** on the FIFO output. Probe `tdata`, `tvalid`, `tlast`, `tuser[0]`, `tready`. Set the ILA depth to at least 4096 samples (enough to capture several rows).
-7. **Run synthesis, implementation, and generate bitstream.**
-8. **Write constraints (XDC)** for the MIPI lane pins (BANK65) and the SCCB pins (BANK43). See §7 for the XDC structure.
-9. **Program the PL** via JTAG (Vivado Hardware Manager) while PetaLinux is running on the PS.
+#### A. Create the project
+
+1. Open Vivado → **Create Project** → RTL Project.
+2. Part: `xczu2cg-sfvc784-1-e` (note: `-1-e`, not `-1-i`).
+3. Add `src/constraints/mipi2.xdc` as a constraint source (tick "Copy into project").
+4. Do not add any RTL sources yet — the MIPI Rx IP wraps everything.
+
+#### B. Create the block design
+
+1. Flow Navigator → **IP Integrator → Create Block Design**. Name it `mipi_bd`.
+2. Add **Zynq UltraScale+ MPSoC** IP → Run Block Automation (defaults OK).
+3. Double-click the Zynq block → **PS-PL Configuration**:
+   - **PL Fabric Clocks**: FCLK0 = 100 MHz.
+   - **PS-PL Interfaces → Master AXI HPM0 FPD**: enable (for MIPI IP register access from PS).
+4. Still in the Zynq config → **I/O Configuration → I/O Peripherals → I2C**:
+   - Enable **I2C1** → route to **EMIO** (not MIO — the SCCB pins are on PL BANK24, not MIO).
+   - This exposes `iic_1` ports on the block design which you'll connect to `cam2_scl`/`cam2_sda` through top-level ports.
+5. Click OK.
+
+#### C. Add the Clocking Wizard
+
+1. Add IP → search **Clocking Wizard**. Add it.
+2. Double-click to configure:
+   - Input: Primary = `clk_in1` from `pl_ref_clk` (25 MHz from the board — your PL reference).
+     - Or use `FCLK0` from the Zynq PS (100 MHz). Either works; using `pl_ref_clk` is simpler for bring-up.
+   - Output clocks:
+     | Output | Frequency | Purpose |
+     |--------|-----------|---------|
+     | `clk_out1` | 200 MHz | D-PHY reference clock (required by MIPI Rx IP) |
+     | `clk_out2` | 100 MHz | Video/AXI-Stream processing clock |
+     | `clk_out3` | 24 MHz | XCLK for OV5647 sensor (drives AC14 / `cam2_clk`) |
+3. Connect `clk_in1` to `pl_ref_clk` external port (create port, 25 MHz input).
+
+#### D. Add the MIPI CSI-2 Receiver Subsystem IP
+
+1. Add IP → search **MIPI CSI-2 Receiver Subsystem** (PG232). Add it.
+2. Double-click to configure:
+   - **Lanes**: 2.
+   - **Pixel Format**: RAW8 (simpler for first bring-up) or RAW10.
+   - **D-PHY Mode**: LVDS (not GTH).
+   - **Line Rate**: set to match your OV5647 config — start with 400 Mbps per lane for 1080p30.
+   - **AXI4-Lite Data Width**: 32.
+3. Connect:
+   - `lite_aclk` → `clk_out2` (100 MHz from Clocking Wizard).
+   - `video_aclk` → `clk_out2`.
+   - `dphy_clk_200M` → `clk_out1` (200 MHz D-PHY ref).
+   - `s_axi_lite` → AXI Interconnect from `M_AXI_HPM0_FPD`.
+   - `mipi_phy_if` → external port (this exposes the differential D-PHY pins — `mipi_phy_if_clk_p/n`, `mipi_phy_if_data_p/n[0]`, `mipi_phy_if_data_p/n[1]`).
+
+#### E. Add the AXI4-Stream FIFO
+
+1. Add IP → **AXI4-Stream Data FIFO**. Add it.
+2. Configure: depth = 4096, data width matches MIPI Rx output (32 for RAW8, 40 for RAW10).
+3. Connect `S_AXIS` to the MIPI Rx IP's `m00_axis` output.
+4. Connect clocks to `clk_out2`.
+
+#### F. Add the ILA
+
+1. Add IP → **ILA (Integrated Logic Analyzer)**. Add it.
+2. Configure:
+   - Number of probes: 5.
+   - Probe widths: `probe0` = 32 (tdata), `probe1` = 1 (tvalid), `probe2` = 1 (tlast), `probe3` = 1 (tuser), `probe4` = 1 (tready).
+   - Sample depth: 4096.
+3. Connect probes to the FIFO output `M_AXIS` signals.
+4. Connect `clk` to `clk_out2`.
+5. Tie the FIFO `M_AXIS_TREADY` to 1 (we don't consume data for bring-up).
+
+#### G. Add the XCLK and I2C output ports
+
+1. Add output port `cam2_clk` (1-bit output). Connect to `clk_out3` (24 MHz) through a Utility Buffer (OBUF).
+2. Add output port `cam2_scl`, `cam2_sda` — connect to the Zynq `IIC1_SCL_O` / `IIC1_SDA_O` EMIO outputs.
+3. Add output port `cam2_gpio` — tie to `1` for now (holds camera out of reset).
+
+#### H. Validate and generate
+
+1. **Tools → Validate Block Design** (or the tick icon). Fix any critical errors (usually unconnected clocks or resets).
+2. Right-click the block design in Sources → **Create HDL Wrapper** → Let Vivado manage.
+3. The wrapper (e.g., `mipi_bd_wrapper.v`) is now the synthesis top.
+
+---
+
+### Step-by-step: Synthesis → Bitstream
+
+Once the block design is valid:
+
+#### I. Run Synthesis
+
+1. Flow Navigator → **Synthesis → Run Synthesis**.
+2. When done: **Open Synthesized Design**.
+3. Check the **Device view** — confirm the MIPI pins (W8/Y8/U8/V8/U9/V9) appear in BANK65 and the control pins (AC14/AC13/AD14/AD15) appear in BANK24. If any pin is red/unassigned, the XDC is not being applied — verify `mipi2.xdc` is listed under **Sources → Constraints**.
+4. Check **Utilization** — verify BRAM/LUT/FF counts look reasonable for the IP.
+
+#### J. Run Implementation
+
+1. Flow Navigator → **Implementation → Run Implementation**.
+2. When done: **Open Implemented Design → Timing Summary**.
+3. Check **WNS (Worst Negative Slack)**:
+   - WNS ≥ 0 → timing met, proceed.
+   - WNS < 0 → timing violation. For bring-up, a small negative slack (< −0.5 ns) on non-critical paths is usually OK. A large violation means a clock constraint or Clocking Wizard setting is wrong.
+
+#### K. Generate Bitstream
+
+1. Flow Navigator → **Generate Bitstream**.
+2. When done: a dialog asks to **Open Hardware Manager** or **View Reports**. Click **Open Hardware Manager**.
+
+---
+
+### Step-by-step: Export to Vitis (PS bring-up)
+
+You need Vitis to write the OV5647 I2C register sequence from the ARM side.
+
+#### L. Export Hardware
+
+1. In Vivado: **File → Export → Export Hardware**.
+2. Select **Include Bitstream** (the PL config must be in the .xsa because Vitis will program both PS and PL).
+3. Output: `mipi_bd_wrapper.xsa`. Note where it's saved.
+
+#### M. Create the Vitis platform and application
+
+1. Launch Vitis (from Vivado: **Tools → Launch Vitis**, or open separately).
+2. **File → New → Platform Project**:
+   - Name: `mipi_platform`.
+   - Hardware: select the `.xsa` you just exported.
+   - OS: **standalone** (baremetal).
+   - CPU: `psu_cortexa53_0`.
+   - Vitis auto-creates the FSBL and BSP.
+3. **File → New → Application Project**:
+   - Platform: `mipi_platform`.
+   - Name: `ov5647_init`.
+   - Template: **Empty Application** (or Hello World — you'll replace it).
+
+#### N. Write the OV5647 I2C init code
+
+In `src/main.c` of the `ov5647_init` app:
+
+```c
+#include "xparameters.h"
+#include "xiicps.h"
+#include "xil_printf.h"
+#include "sleep.h"
+
+#define IIC_DEVICE_ID   XPAR_XIICPS_1_DEVICE_ID   // I2C1 → EMIO → cam2_scl/sda
+#define OV5647_ADDR     0x36                        // 7-bit I2C address
+
+static XIicPs iic;
+
+// Write one register: reg_addr (16-bit), data (8-bit)
+static int ov5647_write(u16 reg, u8 val) {
+    u8 buf[3] = { (reg >> 8) & 0xFF, reg & 0xFF, val };
+    return XIicPs_MasterSendPolled(&iic, buf, 3, OV5647_ADDR);
+}
+
+int main(void) {
+    XIicPs_Config *cfg = XIicPs_LookupConfig(IIC_DEVICE_ID);
+    XIicPs_CfgInitialize(&iic, cfg, cfg->BaseAddress);
+    XIicPs_SetSClk(&iic, 100000);    // 100 kHz SCCB clock
+
+    xil_printf("OV5647 init start\r\n");
+
+    // Soft reset
+    ov5647_write(0x0103, 0x01);
+    usleep(10000);
+
+    // Stream on (minimal — sensor starts sending MIPI data)
+    ov5647_write(0x0100, 0x01);
+
+    xil_printf("OV5647 streaming\r\n");
+    // At this point the ILA should trigger on tvalid rising.
+
+    while (1) {}
+    return 0;
+}
+```
+
+> This is the minimal "stream on" sequence. See §8 for the full register table including resolution, frame rate, exposure, and test pattern settings.
+
+#### O. Build, program, and run
+
+1. Right-click `ov5647_init` → **Build Project**.
+2. Connect the JTAG cable (AL321) to the board and your PC.
+3. Power on the board. Set boot-mode switch to **JTAG** (all ON).
+4. In Vitis: right-click `ov5647_init` → **Run As → Launch on Hardware (Single Application Debug)**.
+   - Vitis programs the PL bitstream + runs the FSBL + runs your app — all via JTAG in one click.
+5. Watch the UART terminal (`115200 8N1`) — you should see `OV5647 init start` then `OV5647 streaming`.
+
+#### P. Switch to Vivado Hardware Manager for ILA
+
+1. While the board is running, open Vivado → **Hardware Manager → Open Target → Auto Connect**.
+2. The ZU2CG device appears. Under it you'll see the ILA core (`hw_ila_1`).
+3. **Set up a trigger**: probe1 (tvalid) = rising edge.
+4. Click **Run Trigger**. If the sensor is streaming, the ILA captures immediately.
+5. See §11 for what to look for in the waveform.
 
 ### Why the ILA, not HDMI, for first bring-up
 

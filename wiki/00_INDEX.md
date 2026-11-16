@@ -136,6 +136,13 @@ The following Xilinx manuals are saved in [`resources/`](../resources/):
 | **DS891** — Zynq UltraScale+ MPSoC Product Selection Guide | [`ds891-zynq-ultrascale-plus-overview.pdf`](../resources/ds891-zynq-ultrascale-plus-overview.pdf) | Phase 0 / Phase 4 — when choosing a device or comparing UltraScale+ variants (LUT/DSP/BRAM counts, package options, feature table) |
 | **UG1085** — Zynq UltraScale+ MPSoC Technical Reference Manual | [`ug1085-zynq-ultrascale-trm.pdf`](../resources/ug1085-zynq-ultrascale-trm.pdf) | Phase 4 onwards — the definitive reference for PS/PL architecture, AXI ports, DDR, DMA, clocking subsystem, interrupts, and boot sequence |
 
+The following ALINX tutorial PDFs (Chinese) are saved in [`resources/tutorial(cn)/`](../resources/tutorial(cn)/):
+
+| Document | File | Wiki translation |
+|----------|------|-----------------|
+| **Course 1** — ALINX ZYNQ MPSoC FPGA Tutorial V1.03 (174 pages) | [`course_s1_...FPGA教程V1.03.pdf`](../resources/tutorial(cn)/course_s1_ALINX_ZYNQ_MPSoC开发平台FPGA教程V1.03.pdf) | [`14_ALINX_FPGA_COURSE1.md`](./tutorials/14_ALINX_FPGA_COURSE1.md) |
+| **Course 2** — ALINX ZYNQ MPSoC Vitis Tutorial V1.06 (388 pages) | [`course_s2_...Vitis应用教程V1.06.pdf`](../resources/tutorial(cn)/course_s2_ALINX_ZYNQ_MPSoC开发平台Vitis应用教程V1.06.pdf) | [`13_VITIS_GETTING_STARTED.md`](./tutorials/13_VITIS_GETTING_STARTED.md) |
+
 ---
 
 *Last updated: 2026-11-16*

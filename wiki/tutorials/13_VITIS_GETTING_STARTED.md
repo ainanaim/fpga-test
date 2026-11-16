@@ -2,7 +2,7 @@
 
 > A translated, step-by-step English guide based on **Chapter 1 ("Experience ARM — Bare-metal Hello World")** of the
 > *ALINX ZYNQ MPSoC Development Platform Vitis Application Tutorial V1.06* (Chinese, 388 pages, author 梅士清).
-> Source PDF: `course_s2_ALINX_ZYNQ_MPSoC开发平台Vitis应用教程V1.06.pdf`
+> Source PDF: [`course_s2_ALINX_ZYNQ_MPSoC开发平台Vitis应用教程V1.06.pdf`](../../resources/tutorial(cn)/course_s2_ALINX_ZYNQ_MPSoC开发平台Vitis应用教程V1.06.pdf)
 >
 > This chapter is the canonical "first Vitis project" walkthrough for the AXU2CGA / AXU2CGB boards. It shows the full
 > ZYNQ development flow: a **FPGA engineer** builds the hardware in Vivado and exports an `.xsa`, then a **software
