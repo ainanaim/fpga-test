@@ -67,6 +67,65 @@
 
 **Total flow time**: 15 minutes (small design, Artix-7) to 4+ hours (large Zynq UltraScale+ design).
 
+### What Each Step Produces — and What the Views Mean
+
+Every Vivado stage produces a checkpoint (`.dcp`) and opens a different view of your design. Knowing which view you're looking at, and what it tells you, is the key to not getting lost in the GUI.
+
+| Vivado step | What it does | What you can view after | What the view tells you |
+|-------------|--------------|------------------------|------------------------|
+| **Elaborated Design** (RTL Analysis) | Parses your Verilog, resolves parameters, builds the module hierarchy. No technology mapping yet. | **Schematic (RTL)** — a block diagram of your modules and how they connect. | "Did Vivado understand my Verilog the way I intended?" Shows the module hierarchy and interconnects, but not real gates. |
+| **I/O Ports** (part of Elaborated Design) | Lets you assign physical pins before synthesis. | **I/O Ports table** — every port with its Package Pin, IOSTANDARD, and drive strength. | "Which physical pin does each signal connect to?" This is where you type W13, Y12, etc. for LEDs. |
+| **Synthesis** | Maps your RTL to FPGA primitives (LUTs, FFs, BRAM, DSP48). Runs logic optimization. | **Schematic (gate-level)** — real gates, LUTs, and flip-flops, not abstract modules. | "What circuit did the synthesizer build from my code?" If you see 32 `FDRE` blocks for `timer_cnt`, your 32-bit counter inferred correctly. If you see a `LATCH` block, you have a bug. |
+| **Implementation (Place)** | Assigns each netlist cell to a physical site on the FPGA die. | **Device view (partially filled)** — your logic blocks appear on the chip floorplan. | "Where on the die did the placer put my logic?" Mostly useful for congestion analysis — if all your DSPs cluster in one corner, you may have routing congestion. |
+| **Implementation (Route)** | Programs the routing fabric to connect placed cells. | **Device view (with routing)** — wires appear connecting your placed cells. | "Are my signals routed?" Congested areas show as dense wire tangles. |
+| **Timing Analysis** (after Implementation) | Static timing analysis — checks every path meets setup/hold at the target clock. | **Timing Summary** — WNS (Worst Negative Slack), TNS (Total Negative Slack), critical paths. | "Will my design run at the clock I asked for?" WNS ≥ 0 means yes. WNS < 0 means no — you need to fix RTL or constraints. |
+| **Bitstream Generation** | Converts the placed-and-routed design into a `.bit` file. | No view — just a file. | The `.bit` is what you download to the FPGA. |
+| **Hardware Manager** (after JTAG download) | Downloads the bitstream to the FPGA and (optionally) attaches ILA. | **ILA waveform** — live signal captures from the running FPGA. | "Is my design actually working on hardware?" This is the only view that shows real-world behavior. |
+
+### How to tell which view you're in
+
+Vivado changes the active view based on which design is open. Look at the dropdown at the top of the main window:
+
+| Dropdown says | You're viewing | After which step |
+|---------------|----------------|------------------|
+| **Schematic** (RTL) | Module-level block diagram | Elaborated Design |
+| **Schematic** (gate-level) | LUTs, FFs, gates | Open Synthesized Design |
+| **Device** | FPGA floorplan | Open Synthesized Design (empty) or Open Implemented Design (filled) |
+| **I/O Ports** | Pin assignment table | Elaborated Design or Open Synthesized Design |
+| **Timing Summary** | STA reports | Open Implemented Design |
+| **ILA Dashboard** | Live hardware waveforms | Hardware Manager |
+
+### The mental model
+
+```
+Your Verilog code
+      │
+      ▼  (Elaborate)
+RTL Schematic      ← "did you understand my code?"
+      │
+      ▼  (Synthesize)
+Gate-level Schematic  ← "what circuit did you build from my code?"
+      │
+      ▼  (Place)
+Device view (placed)  ← "where on the chip did you put my circuit?"
+      │
+      ▼  (Route)
+Device view (routed)  ← "how did you wire it up?"
+      │
+      ▼  (Timing)
+Timing Summary      ← "will it run at my target clock speed?"
+      │
+      ▼  (Bitstream)
+.bit file           ← "the thing I download to the FPGA"
+      │
+      ▼  (Program + ILA)
+ILA waveform        ← "is it actually working on real hardware?"
+```
+
+Each view answers a different question. If you don't know which question you're asking, you'll be confused about what you're looking at.
+
+> **ASIC note:** The RTL Schematic, gate-level Schematic, and Timing Summary all have direct ASIC equivalents (gate-level netlist, STA). The Device view does not — ASIC has no fixed floorplan; you design it yourself. See the FPGA-vs-ASIC comparison later in this doc.
+
 ---
 
 ## 2. Vivado (Xilinx/AMD)
