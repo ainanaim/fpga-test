@@ -32,7 +32,7 @@
 add ILA, trigger on a counter value. This is the foundation everything else
 reuses.
 
-- [ ] Read [`14_ALINX_FPGA_COURSE1.md`](./14_ALINX_FPGA_COURSE1.md) §4
+- [ ] Read [`14_ALINX_FPGA_COURSE1.md`](../tutorials/14_ALINX_FPGA_COURSE1.md) §4
       (PL Hello World LED).
 - [ ] Create the `led` project in Vivado:
       - Part = `xczu2cg-sfvc784-1-e`.
@@ -64,7 +64,7 @@ needs it. ILA is the critical skill.
 **Goal:** learn how to add Xilinx IP (Clocking Wizard) to a project and
 instantiate it in Verilog. The MIPI CSI-2 Rx IP is added the same way.
 
-- [ ] Read [`14_ALINX_FPGA_COURSE1.md`](./14_ALINX_FPGA_COURSE1.md) §5 (PLL).
+- [ ] Read [`14_ALINX_FPGA_COURSE1.md`](../tutorials/14_ALINX_FPGA_COURSE1.md) §5 (PLL).
 - [ ] Build the `pll_test` project:
       - Clocking Wizard IP: input 25 MHz, outputs 200/100/50/25 MHz.
       - Instantiate `clk_wiz_0` in `pll_test.v` with a BUFG before the PLL
@@ -106,7 +106,7 @@ If you've done any Verilog before, you can probably skip Ch.3 entirely.
 
 This is where your actual goal lives. Phases 0-1 were just the prerequisite.
 
-- [ ] Read [`12_OV5647_MIPI_CAMERA_PATH.md`](./12_OV5647_MIPI_CAMERA_PATH.md)
+- [ ] Read [`12_OV5647_MIPI_CAMERA_PATH.md`](../vision/12_OV5647_MIPI_CAMERA_PATH.md)
       §1-5 — MIPI CSI-2 fundamentals, D-PHY, packet structure. Conceptual.
 - [ ] Read §6 — the AXU2CGB-E MIPI connector (BANK65 for lanes, BANK43 for
       SCCB). Confirm the pinout against your schematic.
@@ -115,7 +115,7 @@ This is where your actual goal lives. Phases 0-1 were just the prerequisite.
       LVDS, target bank 65.
 - [ ] Read §8-9 — OV5647 register bring-up + SCCB control. The I2C config
       is done from Vitis (the PS side), not from PL. See
-      [`13_VITIS_GETTING_STARTED.md`](./13_VITIS_GETTING_STARTED.md) for the
+      [`13_VITIS_GETTING_STARTED.md`](../tutorials/13_VITIS_GETTING_STARTED.md) for the
       Vitis flow if you haven't done it yet.
 - [ ] Read §10 — Vivado block design for the MIPI Rx IP. Add the IP, connect
       clocks (Clocking Wizard from FCLK0), wire the AXI-Stream output.
@@ -127,7 +127,7 @@ This is where your actual goal lives. Phases 0-1 were just the prerequisite.
 
 ## Phase 4 — Run the mipi_verify Layers (~1 day)
 
-Now you're doing what [`src/rtl/mipi_verify/README.md`](../src/rtl/mipi_verify/README.md)
+Now you're doing what [`src/rtl/mipi_verify/README.md`](../../src/rtl/mipi_verify/README.md)
 describes. Each layer isolates a failure domain.
 
 ### Layer 0 — ILA only (no logic, ~30 min)
@@ -215,11 +215,11 @@ describes. Each layer isolates a failure domain.
 
 ## Cross-References
 
-- [`14_ALINX_FPGA_COURSE1.md`](./14_ALINX_FPGA_COURSE1.md) — translated Course 1
+- [`14_ALINX_FPGA_COURSE1.md`](../tutorials/14_ALINX_FPGA_COURSE1.md) — translated Course 1
   (PL/FPGA side, prerequisite skills).
-- [`13_VITIS_GETTING_STARTED.md`](./13_VITIS_GETTING_STARTED.md) — translated
+- [`13_VITIS_GETTING_STARTED.md`](../tutorials/13_VITIS_GETTING_STARTED.md) — translated
   Course 2 Ch.1 (Vitis/PS side, needed for I2C sensor config and DDR access).
-- [`12_OV5647_MIPI_CAMERA_PATH.md`](./12_OV5647_MIPI_CAMERA_PATH.md) — the
+- [`12_OV5647_MIPI_CAMERA_PATH.md`](../vision/12_OV5647_MIPI_CAMERA_PATH.md) — the
   MIPI-specific build (Phases 3-4).
-- [`src/rtl/mipi_verify/README.md`](../src/rtl/mipi_verify/README.md) — the
+- [`src/rtl/mipi_verify/README.md`](../../src/rtl/mipi_verify/README.md) — the
   verification modules and their bring-up order.

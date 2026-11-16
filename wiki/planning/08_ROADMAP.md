@@ -36,10 +36,10 @@ These are estimates for someone starting from scratch with programming experienc
 **Goal**: Have everything installed and working. Understand what you are getting into.
 
 ### 0.1 Read the wiki
-- Read [01_FPGA_FUNDAMENTALS.md](./01_FPGA_FUNDAMENTALS.md) — fully
-- Read [02_DIGITAL_DESIGN_PREREQUISITES.md](./02_DIGITAL_DESIGN_PREREQUISITES.md) — fully
-- Skim [03_HDL_AND_HLS.md](./03_HDL_AND_HLS.md) introduction
-- Decide on hardware: read [07_HARDWARE_SELECTION.md](./07_HARDWARE_SELECTION.md)
+- Read [01_FPGA_FUNDAMENTALS.md](../fundamentals/01_FPGA_FUNDAMENTALS.md) — fully
+- Read [02_DIGITAL_DESIGN_PREREQUISITES.md](../fundamentals/02_DIGITAL_DESIGN_PREREQUISITES.md) — fully
+- Skim [03_HDL_AND_HLS.md](../fundamentals/03_HDL_AND_HLS.md) introduction
+- Decide on hardware: read [07_HARDWARE_SELECTION.md](../hardware/07_HARDWARE_SELECTION.md)
 
 ### 0.2 Order Hardware
 - FPGA board (recommended: PYNQ-Z1 or PYNQ-Z2)
@@ -679,8 +679,8 @@ Use this to track your progress:
 
 | Document | File | Relevant phases |
 |----------|------|----------------|
-| **DS891** — Zynq UltraScale+ Product Selection Guide | [`ds891-zynq-ultrascale-plus-overview.pdf`](../resources/ds891-zynq-ultrascale-plus-overview.pdf) | Phase 0: device selection, resource count comparison across MPSoC family |
-| **UG1085** — Zynq UltraScale+ Technical Reference Manual | [`ug1085-zynq-ultrascale-trm.pdf`](../resources/ug1085-zynq-ultrascale-trm.pdf) | Phase 4+: PS/PL AXI ports (Ch. 19), DDR (Ch. 13), DMA (Ch. 10), clocking (Ch. 37), boot (Ch. 11) |
+| **DS891** — Zynq UltraScale+ Product Selection Guide | [`ds891-zynq-ultrascale-plus-overview.pdf`](../../resources/ds891-zynq-ultrascale-plus-overview.pdf) | Phase 0: device selection, resource count comparison across MPSoC family |
+| **UG1085** — Zynq UltraScale+ Technical Reference Manual | [`ug1085-zynq-ultrascale-trm.pdf`](../../resources/ug1085-zynq-ultrascale-trm.pdf) | Phase 4+: PS/PL AXI ports (Ch. 19), DDR (Ch. 13), DMA (Ch. 10), clocking (Ch. 37), boot (Ch. 11) |
 
 ---
 

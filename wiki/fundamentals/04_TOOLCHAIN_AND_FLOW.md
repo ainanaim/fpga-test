@@ -286,7 +286,7 @@ After running timing, check the **Clock Interaction report**:
 - Yellow: warning (potential issue)
 - Red: unsafe CDC — you have logic crossing clock domains without synchronization
 
-> **Timing constraints are a deep topic.** For a full treatment of STA, generated clocks, CDC constraints, multi-cycle paths, reading critical-path reports, and the timing closure workflow, see [09 — Timing Constraints (XDC) Deep Dive](./09_TIMING_CONSTRAINTS.md).
+> **Timing constraints are a deep topic.** For a full treatment of STA, generated clocks, CDC constraints, multi-cycle paths, reading critical-path reports, and the timing closure workflow, see [09 — Timing Constraints (XDC) Deep Dive](../hardware/09_TIMING_CONSTRAINTS.md).
 
 ---
 

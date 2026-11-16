@@ -636,7 +636,7 @@ Hold violations in the timing summary (WHS < 0) cannot be fixed by reducing cloc
 
 ## Local Reference: UG1085 Chapter Guide
 
-The Zynq UltraScale+ TRM ([`ug1085-zynq-ultrascale-trm.pdf`](../resources/ug1085-zynq-ultrascale-trm.pdf)) covers the following timing-relevant chapters:
+The Zynq UltraScale+ TRM ([`ug1085-zynq-ultrascale-trm.pdf`](../../resources/ug1085-zynq-ultrascale-trm.pdf)) covers the following timing-relevant chapters:
 
 | Chapter | Title | Relevant to |
 |---------|-------|-------------|
@@ -647,5 +647,5 @@ The Zynq UltraScale+ TRM ([`ug1085-zynq-ultrascale-trm.pdf`](../resources/ug1085
 
 ---
 
-**Previous**: [04 — Toolchain and Design Flow](./04_TOOLCHAIN_AND_FLOW.md)
-**Next**: [08 — Project Roadmap](./08_ROADMAP.md)
+**Previous**: [04 — Toolchain and Design Flow](../fundamentals/04_TOOLCHAIN_AND_FLOW.md)
+**Next**: [08 — Project Roadmap](../planning/08_ROADMAP.md)

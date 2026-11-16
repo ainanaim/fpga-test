@@ -433,4 +433,4 @@ Camera → [Stage 1] →FIFO→ [Stage 2] →FIFO→ [Stage 3] → Display
 
 ---
 
-**Next**: [06 — Vision on FPGAs](./06_VISION_ON_FPGA.md)
+**Next**: [06 — Vision on FPGAs](../vision/06_VISION_ON_FPGA.md)

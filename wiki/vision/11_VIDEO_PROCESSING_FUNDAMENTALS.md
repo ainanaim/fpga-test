@@ -974,6 +974,6 @@ For MIPI CSI-2 cameras, use the Vivado MIPI CSI-2 Receiver Subsystem IP instead 
 
 ---
 
-**Previous**: [10 — Zynq UltraScale+ Reference](./10_ZYNQ_ULTRASCALE_REFERENCE.md)  
+**Previous**: [10 — Zynq UltraScale+ Reference](../hardware/10_ZYNQ_ULTRASCALE_REFERENCE.md)  
 **Next**: [12 — OV5647 MIPI Camera Path on the AXU2CGB](./12_OV5647_MIPI_CAMERA_PATH.md)  
-**Back to index**: [00 — Wiki Index](./00_INDEX.md)
+**Back to index**: [00 — Wiki Index](../00_INDEX.md)

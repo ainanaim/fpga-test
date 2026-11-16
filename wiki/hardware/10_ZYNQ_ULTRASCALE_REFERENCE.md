@@ -1,8 +1,8 @@
 # 10 — Zynq UltraScale+ Reference Summary
 
 > Condensed reference drawn from two local documents:
-> - **DS891** (v1.11.1, Mar 2025) — Product Selection Guide → [`resources/ds891-zynq-ultrascale-plus-overview.pdf`](../resources/ds891-zynq-ultrascale-plus-overview.pdf)
-> - **UG1085** (v2.5, Mar 2025) — Technical Reference Manual → [`resources/ug1085-zynq-ultrascale-trm.pdf`](../resources/ug1085-zynq-ultrascale-trm.pdf)
+> - **DS891** (v1.11.1, Mar 2025) — Product Selection Guide → [`resources/ds891-zynq-ultrascale-plus-overview.pdf`](../../resources/ds891-zynq-ultrascale-plus-overview.pdf)
+> - **UG1085** (v2.5, Mar 2025) — Technical Reference Manual → [`resources/ug1085-zynq-ultrascale-trm.pdf`](../../resources/ug1085-zynq-ultrascale-trm.pdf)
 
 ---
 
@@ -337,4 +337,4 @@ The device has four independently controllable power domains (UG1085 Ch.1):
 ---
 
 **Previous**: [09 — Timing Constraints (XDC) Deep Dive](./09_TIMING_CONSTRAINTS.md)  
-**Index**: [00 — Wiki Index](./00_INDEX.md)
+**Index**: [00 — Wiki Index](../00_INDEX.md)

@@ -1455,5 +1455,5 @@ ARM CPU load: < 1%.  PL does all pixel work.
 
 ---
 
-**Previous**: [05 — Memory and Interfaces](./05_MEMORY_AND_INTERFACES.md)  
-**Next**: [07 — Hardware Selection Guide](./07_HARDWARE_SELECTION.md)
+**Previous**: [05 — Memory and Interfaces](../fundamentals/05_MEMORY_AND_INTERFACES.md)  
+**Next**: [07 — Hardware Selection Guide](../hardware/07_HARDWARE_SELECTION.md)

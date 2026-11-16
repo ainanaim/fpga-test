@@ -90,7 +90,7 @@
 | Max HP I/O | 156 |
 | Max HD I/O | 96 |
 
-> **Note**: The ZU2CG has fewer LUTs and DSPs than a ZU5EG (Kria K26) or ZU7EG (ZCU104). However, it still has significantly more PS capability (Cortex-A53, Cortex-R5F, USB3, PCIe) than the Zynq-7020. Consult DS891 for the full device feature table: [`ds891-zynq-ultrascale-plus-overview.pdf`](../resources/ds891-zynq-ultrascale-plus-overview.pdf)
+> **Note**: The ZU2CG has fewer LUTs and DSPs than a ZU5EG (Kria K26) or ZU7EG (ZCU104). However, it still has significantly more PS capability (Cortex-A53, Cortex-R5F, USB3, PCIe) than the Zynq-7020. Consult DS891 for the full device feature table: [`ds891-zynq-ultrascale-plus-overview.pdf`](../../resources/ds891-zynq-ultrascale-plus-overview.pdf)
 
 **Board features (ALINX AXU2CGB):**
 - **Memory**: DDR4 (verify exact capacity from ALINX documentation/schematic)
@@ -225,5 +225,5 @@ Before writing any RTL or buying any peripheral, verify these things in both boa
 
 ---
 
-**Previous**: [06 — Vision on FPGAs](./06_VISION_ON_FPGA.md)  
-**Next**: [08 — Project Roadmap](./08_ROADMAP.md)
+**Previous**: [06 — Vision on FPGAs](../vision/06_VISION_ON_FPGA.md)  
+**Next**: [08 — Project Roadmap](../planning/08_ROADMAP.md)

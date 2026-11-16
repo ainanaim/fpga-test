@@ -2,7 +2,7 @@
 
 > The concrete data path from an OmniVision OV5647 (Raspberry Pi Camera V1 sensor) through a 15-pin MIPI CSI-2 ribbon cable into the Zynq UltraScale+ ZU2CG on the ALINX AXU2CGB-E board. This document covers MIPI CSI-2 fundamentals, the D-PHY physical layer, the Vivado MIPI CSI-2 Receiver Subsystem IP, the OV5647 register bring-up sequence, and the ILA-based bring-up workflow.
 >
-> **Prerequisite reading**: [06 — Vision on FPGAs](./06_VISION_ON_FPGA.md) (pixel formats, pipeline architecture), [10 — Zynq UltraScale+ Reference](./10_ZYNQ_ULTRASCALE_REFERENCE.md) (PS/PL interfaces), [11 — Video Processing Fundamentals](./11_VIDEO_PROCESSING_FUNDAMENTALS.md) §16 (DVP receiver FSM — the parallel counterpart to the MIPI path described here).
+> **Prerequisite reading**: [06 — Vision on FPGAs](./06_VISION_ON_FPGA.md) (pixel formats, pipeline architecture), [10 — Zynq UltraScale+ Reference](../hardware/10_ZYNQ_ULTRASCALE_REFERENCE.md) (PS/PL interfaces), [11 — Video Processing Fundamentals](./11_VIDEO_PROCESSING_FUNDAMENTALS.md) §16 (DVP receiver FSM — the parallel counterpart to the MIPI path described here).
 
 ---
 
@@ -425,7 +425,7 @@ The IP's AXI4-Stream output (`m00_axis`) carries:
 | `m00_axis_tuser[0]` | 1 = first pixel of a frame (start of frame, derived from FS short packet) |
 | `m00_axis_tready` | Consumer says "I can accept" — tie to 1 for bring-up, or connect to a FIFO |
 
-This is the **same AXI4-Stream video convention** used everywhere else in this wiki (see [05 — Memory and Interfaces](./05_MEMORY_AND_INTERFACES.md) §5 and [11 — Video Processing Fundamentals](./11_VIDEO_PROCESSING_FUNDAMENTALS.md) §4). Your downstream pipeline does not know or care that the pixels came via MIPI rather than DVP.
+This is the **same AXI4-Stream video convention** used everywhere else in this wiki (see [05 — Memory and Interfaces](../fundamentals/05_MEMORY_AND_INTERFACES.md) §5 and [11 — Video Processing Fundamentals](./11_VIDEO_PROCESSING_FUNDAMENTALS.md) §4). Your downstream pipeline does not know or care that the pixels came via MIPI rather than DVP.
 
 ---
 
@@ -828,4 +828,4 @@ For first visual confirmation, route to DDR and save a frame as a PNG from PetaL
 ---
 
 **Previous**: [11 — Video Processing Fundamentals](./11_VIDEO_PROCESSING_FUNDAMENTALS.md)
-**Back to index**: [00 — Wiki Index](./00_INDEX.md)
+**Back to index**: [00 — Wiki Index](../00_INDEX.md)
