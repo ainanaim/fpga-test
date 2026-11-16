@@ -1,0 +1,50 @@
+# macOS
+.DS_Store
+._*
+
+# Vivado / Xilinx build artifacts
+*.xsa
+*.bit
+*.bin
+*.ltx
+*.jou
+*.log
+*.str
+*.pb
+*.bak
+*.wdb
+*.wpc
+*.os
+*.xml.bak
+XilinxIP/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.runs/
+*.sim/
+*.gen/
+*.syn/
+*.impl/
+*.html/
+*.rpt/
+*.summary/
+
+# Vitis build artifacts
+*.elf
+*.o
+*.a
+*.bin
+Debug/
+Release/
+*.launch
+*.spr
+*.metadata/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+Thumbs.db
