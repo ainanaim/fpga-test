@@ -353,11 +353,11 @@ Source: [`alinxalinx/AXU2CGA_AXU2CGB` → `vivado/auto_create_project/src/constr
 | `PULLUP true` on SCL/SDA/GPIO | ✅ present | ✅ added | ✅ synced |
 | XCLK pin (AG13) | not in official file | ✅ present | added by us |
 | Differential pair pins | not in official file | ✅ present | added by us — IP manages IOSTANDARD |
-| Port naming | `cam0_gpio[0]`, `cam0_i2c_scl_io` | `cam1_gpio`, `cam1_scl` | different style — see note below |
+| Port naming | `cam0_gpio[0]`, `cam0_i2c_scl_io` | `cam1_gpio`, `cam1_i2c_scl_io` | ✅ now matches ALINX convention |
 
 **Why the official file has no differential pair pins:** The MIPI CSI-2 Rx Subsystem IP (PG232) auto-generates IOSTANDARD constraints for the D-PHY differential pairs itself. You only provide `PACKAGE_PIN`. Our XDC has them for completeness.
 
-**Port naming difference:** The official uses `cam0_i2c_scl_io` / `cam0_i2c_sda_io` (the `_io` suffix and bidirectional style comes from the AXI IIC IP). Our XDC uses `cam1_scl` / `cam1_sda` for the PS EMIO I2C0 style. If you use the AXI IIC IP instead of PS EMIO, rename ports to match.
+**Port naming:** Our XDC now uses `cam1_i2c_scl_io` / `cam1_i2c_sda_io` to match the ALINX convention. These names come from the AXI IIC IP — when you create a BD interface port named `cam1_i2c`, Vivado generates top-level ports `cam1_i2c_scl_io` and `cam1_i2c_sda_io` with IOBUF primitives for bidirectional I2C. This is cleaner than PS EMIO (which requires manual IOBUF wiring) and matches ALINX's own approach.
 
 **Why PULLUP matters:** The SCCB/I2C lines are open-drain. Without a pull-up, the lines float high only via the camera module's on-board resistors (1.5 kΩ on Pi V1). The FPGA's internal weak pull-up adds an extra path to VCC and reduces the chance of a floating line if the resistors are marginal. The official ALINX file enables it on GPIO too.
 
@@ -455,14 +455,17 @@ set_property PACKAGE_PIN AC8 [get_ports {mipi_phy_if_data_n[1]}] ;# J23 pin 5
 # official ALINX mipi.xdc (cam0_* entries).
 set_property PACKAGE_PIN AH14 [get_ports cam1_gpio]  ;# J23 pin 11
 set_property PACKAGE_PIN AG13 [get_ports cam1_clk]   ;# J23 pin 12 — XCLK to OV5647
-set_property PACKAGE_PIN AH13 [get_ports cam1_scl]   ;# J23 pin 13 — SCCB SCL
-set_property PACKAGE_PIN AE13 [get_ports cam1_sda]   ;# J23 pin 14 — SCCB SDA
-set_property IOSTANDARD LVCMOS33 [get_ports {cam1_gpio cam1_clk cam1_scl cam1_sda}]
+set_property PACKAGE_PIN AH13 [get_ports cam1_i2c_scl_io]  ;# J23 pin 13 — SCCB SCL
+set_property PACKAGE_PIN AE13 [get_ports cam1_i2c_sda_io]  ;# J23 pin 14 — SCCB SDA
+set_property IOSTANDARD LVCMOS33 [get_ports cam1_gpio]
+set_property IOSTANDARD LVCMOS33 [get_ports cam1_clk]
+set_property IOSTANDARD LVCMOS33 [get_ports cam1_i2c_scl_io]
+set_property IOSTANDARD LVCMOS33 [get_ports cam1_i2c_sda_io]
 
 # Pull-ups confirmed in official ALINX mipi.xdc — required for open-drain SCCB.
 set_property PULLUP true [get_ports cam1_gpio]
-set_property PULLUP true [get_ports cam1_scl]
-set_property PULLUP true [get_ports cam1_sda]
+set_property PULLUP true [get_ports cam1_i2c_scl_io]
+set_property PULLUP true [get_ports cam1_i2c_sda_io]
 ```
 
 ### What the IP outputs
@@ -618,7 +621,7 @@ Electrically and protocol-wise it is I²C. The Linux `i2c` subsystem drives it a
 
 ### Routing on the AXU2CGB-E
 
-The MIPI1 connector's SCCB lines (SDA, SCL) land on **BANK24** at 3.3 V (confirmed from J23 pin table — `cam1_scl` = AH13, `cam1_sda` = AE13). To drive them from the PS:
+The MIPI1 connector's SCCB lines (SDA, SCL) land on **BANK24** at 3.3 V (confirmed from J23 pin table — `cam1_i2c_scl_io` = AH13, `cam1_i2c_sda_io` = AE13). To drive them from the FPGA:
 
 1. **Enable a PS I²C controller** in the Vivado Zynq PS block configuration — use **I2C0** (confirmed: bus 0 on this board).
 2. **Route the I²C signals to EMIO** (not MIO) — because the SCCB pins are on PL I/O (BANK24), not MIO pins. EMIO extends the PS I²C controller through the PL to package pins.
@@ -731,64 +734,76 @@ The minimal block design to verify the MIPI data path:
 3. Double-click the Zynq block → **PS-PL Configuration**:
    - **PL Fabric Clocks**: FCLK0 = 100 MHz.
    - **PS-PL Interfaces → Master AXI HPM0 FPD**: enable (for MIPI IP register access from PS).
-4. Still in the Zynq config → **I/O Configuration → I/O Peripherals → I2C**:
-   - Enable **I2C0** → route to **EMIO** (not MIO — the SCCB pins are on PL BANK24, not MIO).
-   - This exposes `iic_0` ports on the block design which you'll connect to `cam1_scl`/`cam1_sda` through top-level ports.
-5. Click OK.
+4. Click OK. (I2C is handled by the AXI IIC IP added in step F — no PS I2C needed.)
 
 #### C. Add the Clocking Wizard
 
+> **If using the Tcl script:** this is handled automatically. Steps C–G below describe the same design the script builds — read for understanding or skip to H.
+
 1. Add IP → search **Clocking Wizard**. Add it.
 2. Double-click to configure:
-   - Input: Primary = `clk_in1` from `pl_ref_clk` (25 MHz from the board — your PL reference).
-     - Or use `FCLK0` from the Zynq PS (100 MHz). Either works; using `pl_ref_clk` is simpler for bring-up.
-   - Output clocks:
+   - Input: `clk_in1` from `pl_ref_clk` external port (25 MHz from board pin AB11).
+   - Output clocks (2 outputs):
      | Output | Frequency | Purpose |
      |--------|-----------|---------|
      | `clk_out1` | 200 MHz | D-PHY reference clock (required by MIPI Rx IP) |
-     | `clk_out2` | 100 MHz | Video/AXI-Stream processing clock |
-     | `clk_out3` | 24 MHz | XCLK for OV5647 sensor (drives AG13 / `cam1_clk`) |
-3. Connect `clk_in1` to `pl_ref_clk` external port (create port, 25 MHz input).
+     | `clk_out2` | 24 MHz | XCLK for OV5647 sensor → `cam1_clk` port (pin AG13) |
+   - Reset type: Active-Low.
+3. All 100 MHz PL logic (AXI interconnect, FIFO, ILA, AXI IIC) uses **`pl_clk0`** directly from the Zynq PS (not a wizard output) — no CDC issues.
 
 #### D. Add the MIPI CSI-2 Receiver Subsystem IP
 
 1. Add IP → search **MIPI CSI-2 Receiver Subsystem** (PG232). Add it.
 2. Double-click to configure:
    - **Lanes**: 2.
-   - **Pixel Format**: RAW8 (simpler for first bring-up) or RAW10.
+   - **Pixel Format**: RAW8 (simpler for first bring-up).
    - **D-PHY Mode**: LVDS (not GTH).
-   - **Line Rate**: set to match your OV5647 config — start with 400 Mbps per lane for 1080p30.
-   - **AXI4-Lite Data Width**: 32.
+   - **Line Rate**: 400 Mbps (safe starting point for 1080p30).
+   - In the **IO Settings** tab, enter the confirmed J23 pin locations:
+     | Signal | Pin | IO LOC Name |
+     |--------|-----|-------------|
+     | CLK lane | AC9 | IO_L1P_T0L_N0_DBC_64 |
+     | Data lane 0 | AE9 | IO_L2P_T0L_N2_64 |
+     | Data lane 1 | AB8 | IO_L3P_T0L_N4_AD15P_64 |
 3. Connect:
-   - `lite_aclk` → `clk_out2` (100 MHz from Clocking Wizard).
-   - `video_aclk` → `clk_out2`.
-   - `dphy_clk_200M` → `clk_out1` (200 MHz D-PHY ref).
-   - `s_axi_lite` → AXI Interconnect from `M_AXI_HPM0_FPD`.
-   - `mipi_phy_if` → external port (this exposes the differential D-PHY pins — `mipi_phy_if_clk_p/n`, `mipi_phy_if_data_p/n[0]`, `mipi_phy_if_data_p/n[1]`).
+   - `dphy_clk_200M` → `clk_out1` (200 MHz from Clocking Wizard).
+   - `lite_aclk` → `pl_clk0` (100 MHz from PS).
+   - `video_aclk` → `pl_clk0`.
+   - `s_axi_lite` → AXI Interconnect M00_AXI.
+   - `mipi_phy_if` → external interface port (generates `mipi_phy_if_clk_p/n`, `mipi_phy_if_data_p/n[0/1]`).
 
 #### E. Add the AXI4-Stream FIFO
 
 1. Add IP → **AXI4-Stream Data FIFO**. Add it.
-2. Configure: depth = 4096, data width matches MIPI Rx output (32 for RAW8, 40 for RAW10).
+2. Configure: TDATA = 4 bytes (32-bit), depth = 4096, TUSER width = 1, TLAST enabled.
 3. Connect `S_AXIS` to the MIPI Rx IP's `m00_axis` output.
-4. Connect clocks to `clk_out2`.
+4. Connect `s_axis_aclk` → `pl_clk0`.
+5. Tie `M_AXIS_TREADY` high using **Constant** IP (value 1) — we consume all data for bring-up.
 
-#### F. Add the ILA
+#### F. Add the AXI IIC and ILA
 
-1. Add IP → **ILA (Integrated Logic Analyzer)**. Add it.
-2. Configure:
-   - Number of probes: 5.
-   - Probe widths: `probe0` = 32 (tdata), `probe1` = 1 (tvalid), `probe2` = 1 (tlast), `probe3` = 1 (tuser), `probe4` = 1 (tready).
-   - Sample depth: 4096.
-3. Connect probes to the FIFO output `M_AXIS` signals.
-4. Connect `clk` to `clk_out2`.
-5. Tie the FIFO `M_AXIS_TREADY` to 1 (we don't consume data for bring-up).
+**AXI IIC** (replaces PS EMIO I2C — handles bidirectional SDA/SCL automatically):
+1. Add IP → **AXI IIC**. Add it.
+2. Connect `S_AXI` → AXI Interconnect M01_AXI.
+3. Connect `s_axi_aclk` → `pl_clk0`.
+4. Create external **interface port** named `cam1_i2c` (type: IIC). This generates ports `cam1_i2c_scl_io` / `cam1_i2c_sda_io` — these match the XDC constraints at AH13 / AE13.
+5. In Vitis, use `XIic_Send()` from `xiic_l.h` (see Vitis code section below).
 
-#### G. Add the XCLK and I2C output ports
+**ILA**:
+1. Add IP → **ILA**. Configure: 5 probes, probe0=32, probes 1–4=1, depth=4096.
+2. Connect `clk` → `pl_clk0`.
+3. Connect probes to FIFO `M_AXIS` output signals:
+   - `probe0[31:0]` ← `m_axis_tdata`
+   - `probe1[0]` ← `m_axis_tvalid`
+   - `probe2[0]` ← `m_axis_tlast`
+   - `probe3[0]` ← `m_axis_tuser[0]`
+   - `probe4[0]` ← the constant-1 net (TREADY = 1)
 
-1. Add output port `cam1_clk` (1-bit output). Connect to `clk_out3` (24 MHz) through a Utility Buffer (OBUF).
-2. Add output port `cam1_scl`, `cam1_sda` — connect to the Zynq `IIC0_SCL_O` / `IIC0_SDA_O` EMIO outputs.
-3. Add output port `cam1_gpio` — tie to `1` for now (holds camera out of reset).
+#### G. Add the XCLK and GPIO ports
+
+1. Add output port `cam1_clk` → connect to `clk_out2` (24 MHz from Clocking Wizard).
+2. Add output port `cam1_gpio` → tie to Constant 1 (holds OV5647 out of reset).
+3. The I2C ports (`cam1_i2c_scl_io` / `cam1_i2c_sda_io`) are created automatically by the AXI IIC interface port in step F.
 
 #### H. Validate and generate
 
@@ -854,26 +869,21 @@ In `src/main.c` of the `ov5647_init` app:
 
 ```c
 #include "xparameters.h"
-#include "xiicps.h"
+#include "xiic_l.h"      // AXI IIC low-level (polled, no interrupt setup needed)
 #include "xil_printf.h"
 #include "sleep.h"
 
-#define IIC_DEVICE_ID   XPAR_XIICPS_0_DEVICE_ID   // I2C0 → EMIO → cam1_scl/sda (confirmed: bus 0)
-#define OV5647_ADDR     0x36                        // 7-bit I2C address
-
-static XIicPs iic;
+// XPAR_AXI_IIC_0_BASEADDR is generated by Vitis from the exported .xsa
+#define IIC_BASE    XPAR_AXI_IIC_0_BASEADDR
+#define OV5647_ADDR 0x36   // 7-bit I2C address
 
 // Write one register: reg_addr (16-bit), data (8-bit)
-static int ov5647_write(u16 reg, u8 val) {
+static void ov5647_write(u16 reg, u8 val) {
     u8 buf[3] = { (reg >> 8) & 0xFF, reg & 0xFF, val };
-    return XIicPs_MasterSendPolled(&iic, buf, 3, OV5647_ADDR);
+    XIic_Send(IIC_BASE, OV5647_ADDR, buf, 3, XIIC_STOP);
 }
 
 int main(void) {
-    XIicPs_Config *cfg = XIicPs_LookupConfig(IIC_DEVICE_ID);
-    XIicPs_CfgInitialize(&iic, cfg, cfg->BaseAddress);
-    XIicPs_SetSClk(&iic, 100000);    // 100 kHz SCCB clock
-
     xil_printf("OV5647 init start\r\n");
 
     // Soft reset
@@ -945,7 +955,7 @@ After step F (ILA), add these two IPs to expose `mipi_stats` counters to the PS:
    - Configure: GPIO Width = 32, All Inputs = ✅.
    - Connect `GPIO_I[31:0]` to `pixel_cnt[31:0]` output of `mipi_stats`.
    - Connect to same AXI Interconnect.
-3. Connect both clocks to `clk_out2` (100 MHz).
+3. Connect both clocks to `pl_clk0` (100 MHz from PS).
 
 After re-exporting the `.xsa`, Vitis auto-generates `XPAR_AXI_GPIO_0_DEVICE_ID` and `XPAR_AXI_GPIO_1_DEVICE_ID` in `xparameters.h`.
 
@@ -956,30 +966,24 @@ Replace the `main.c` from step N with this version — it streams live stats to 
 ```c
 #include "xparameters.h"
 #include "xgpio.h"
-#include "xiicps.h"
+#include "xiic_l.h"      // AXI IIC low-level (polled)
 #include "xil_printf.h"
 #include "sleep.h"
 
 // Check xparameters.h after export — IDs may differ
 #define GPIO_FRAME_ID   XPAR_AXI_GPIO_0_DEVICE_ID
 #define GPIO_PIXEL_ID   XPAR_AXI_GPIO_1_DEVICE_ID
-#define IIC_DEVICE_ID   XPAR_XIICPS_0_DEVICE_ID   // I2C0, confirmed bus 0 on this board
+#define IIC_BASE        XPAR_AXI_IIC_0_BASEADDR
 #define OV5647_ADDR     0x36
 
-static XGpio  gpio_frame, gpio_pixel;
-static XIicPs iic;
+static XGpio gpio_frame, gpio_pixel;
 
-static int ov5647_write(u16 reg, u8 val) {
+static void ov5647_write(u16 reg, u8 val) {
     u8 buf[3] = { (reg >> 8) & 0xFF, reg & 0xFF, val };
-    return XIicPs_MasterSendPolled(&iic, buf, 3, OV5647_ADDR);
+    XIic_Send(IIC_BASE, OV5647_ADDR, buf, 3, XIIC_STOP);
 }
 
 int main(void) {
-    // Init I2C
-    XIicPs_Config *cfg = XIicPs_LookupConfig(IIC_DEVICE_ID);
-    XIicPs_CfgInitialize(&iic, cfg, cfg->BaseAddress);
-    XIicPs_SetSClk(&iic, 100000);   // 100 kHz SCCB
-
     // Init GPIO readers
     XGpio_Initialize(&gpio_frame, GPIO_FRAME_ID);
     XGpio_Initialize(&gpio_pixel, GPIO_PIXEL_ID);

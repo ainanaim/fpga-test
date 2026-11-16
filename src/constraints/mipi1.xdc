@@ -78,25 +78,33 @@ set_property PACKAGE_PIN AC8 [get_ports {mipi_phy_if_data_n[1]}]
 #
 #    J23 pin 11  CAM1_GPIO  IO_L2N_24  AH14  Camera enable / GPIO
 #    J23 pin 12  CAM1_CLK   IO_L3P_24  AG13  XCLK output to OV5647 (24 MHz)
-#    J23 pin 13  CAM1_SCL   IO_L3N_24  AH13  SCCB / I2C clock (from PS EMIO)
-#    J23 pin 14  CAM1_SDA   IO_L4P_24  AE13  SCCB / I2C data  (from PS EMIO)
+#    J23 pin 13  CAM1_SCL   IO_L3N_24  AH13  SCCB / I2C clock
+#    J23 pin 14  CAM1_SDA   IO_L4P_24  AE13  SCCB / I2C data
 #
-#  cam1_clk (XCLK) must be driven at 24 MHz from a Clocking Wizard output.
+#  Port naming for I2C lines uses the AXI IIC interface convention:
+#    cam1_i2c_scl_io  (bidirectional — from create_bd_intf_port "cam1_i2c")
+#    cam1_i2c_sda_io  (bidirectional — from create_bd_intf_port "cam1_i2c")
+#  Vivado generates IOBUF primitives for these automatically.
+#
+#  cam1_clk (XCLK) driven at 24 MHz from Clocking Wizard clk_out2.
 #  OV5647 requires XCLK before it will respond on SCCB.
 ################################################################################
 
 set_property PACKAGE_PIN AH14 [get_ports cam1_gpio]
 set_property PACKAGE_PIN AG13 [get_ports cam1_clk]
-set_property PACKAGE_PIN AH13 [get_ports cam1_scl]
-set_property PACKAGE_PIN AE13 [get_ports cam1_sda]
-set_property IOSTANDARD LVCMOS33 [get_ports {cam1_gpio cam1_clk cam1_scl cam1_sda}]
+set_property PACKAGE_PIN AH13 [get_ports cam1_i2c_scl_io]
+set_property PACKAGE_PIN AE13 [get_ports cam1_i2c_sda_io]
+set_property IOSTANDARD LVCMOS33 [get_ports cam1_gpio]
+set_property IOSTANDARD LVCMOS33 [get_ports cam1_clk]
+set_property IOSTANDARD LVCMOS33 [get_ports cam1_i2c_scl_io]
+set_property IOSTANDARD LVCMOS33 [get_ports cam1_i2c_sda_io]
 
 # Pull-ups confirmed in official ALINX mipi.xdc — required for open-drain
 # SCCB/I2C lines. Pi V1 camera module has on-board 1.5 kΩ pull-ups but
 # enabling the FPGA's weak pull-up adds no harm and helps if they are absent.
 set_property PULLUP true [get_ports cam1_gpio]
-set_property PULLUP true [get_ports cam1_scl]
-set_property PULLUP true [get_ports cam1_sda]
+set_property PULLUP true [get_ports cam1_i2c_scl_io]
+set_property PULLUP true [get_ports cam1_i2c_sda_io]
 
 # cam1_clk is a clock output driven by the Clocking Wizard — mark it as a
 # generated clock so the timing engine tracks it correctly.
