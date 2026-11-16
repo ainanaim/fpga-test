@@ -1,0 +1,90 @@
+################################################################################
+#  mipi1.xdc — J23 MIPI Interface Pin Constraints
+#  Board:  ALINX AXU2CGB-E
+#  Camera: OV5647 on MIPI1 connector J23
+#
+#  Sources:
+#    - ALINX AXU2CGA/B User Manual Part 14 (MIPI Interface J23 Pin Assignment)
+#    - Verified against official ALINX mipi.xdc (cam0_* entries)
+#
+#  USAGE
+#  -----
+#  Add this file to your Vivado project as a constraint source.
+#  Port names below match the MIPI CSI-2 Rx Subsystem IP (PG232) top-level
+#  ports and the top-level wrapper for CAM1 control signals.
+#
+#  NOTE ON IOSTANDARD FOR DIFFERENTIAL PAIRS
+#  ------------------------------------------
+#  The MIPI CSI-2 Rx Subsystem IP (PG232) auto-generates its own IOSTANDARD
+#  constraints for the differential D-PHY pairs (LVDS on HP bank BANK64).
+#  Do NOT set IOSTANDARD for mipi_phy_if_* ports here — the IP manages them.
+#  Only PACKAGE_PIN is needed for those ports.
+#
+#  For the CAM1 control signals (BANK24, 3.3 V), LVCMOS33 is set here.
+################################################################################
+
+################################################################################
+#  PL Reference Clock (25 MHz, BANK44)
+#  Used by the Clocking Wizard to generate all derived clocks.
+################################################################################
+set_property PACKAGE_PIN AB11 [get_ports pl_ref_clk]
+set_property IOSTANDARD  LVCMOS33 [get_ports pl_ref_clk]
+create_clock -period 40.000 -name pl_ref_clk -waveform {0.000 20.000} \
+    [get_ports pl_ref_clk]
+
+################################################################################
+#  MIPI1 D-PHY Differential Pairs — BANK64 (HP, 1.2 V)
+#
+#  J23 connector pinout (confirmed from AXU2CGA/B user manual Part 14):
+#    J23 pin 2  MIPI1_LAN0_N  IO_L2N_64  AE8  Data lane 0 −
+#    J23 pin 3  MIPI1_LAN0_P  IO_L2P_64  AE9  Data lane 0 +
+#    J23 pin 5  MIPI1_LAN1_N  IO_L3N_64  AC8  Data lane 1 −
+#    J23 pin 6  MIPI1_LAN1_P  IO_L3P_64  AB8  Data lane 1 +
+#    J23 pin 8  MIPI1_CLK_N   IO_L1N_64  AD9  D-PHY clock lane −
+#    J23 pin 9  MIPI1_CLK_P   IO_L1P_64  AC9  D-PHY clock lane +
+#
+#  Port names match PG232 MIPI CSI-2 Rx Subsystem top-level interface:
+#    mipi_phy_if_clk_p / mipi_phy_if_clk_n
+#    mipi_phy_if_data_p[0] / mipi_phy_if_data_n[0]
+#    mipi_phy_if_data_p[1] / mipi_phy_if_data_n[1]
+#
+#  IOSTANDARD is NOT set here — the IP sets it automatically (LVDS).
+################################################################################
+
+# D-PHY clock lane
+set_property PACKAGE_PIN AC9 [get_ports mipi_phy_if_clk_p]
+set_property PACKAGE_PIN AD9 [get_ports mipi_phy_if_clk_n]
+
+# D-PHY data lane 0
+set_property PACKAGE_PIN AE9 [get_ports {mipi_phy_if_data_p[0]}]
+set_property PACKAGE_PIN AE8 [get_ports {mipi_phy_if_data_n[0]}]
+
+# D-PHY data lane 1
+set_property PACKAGE_PIN AB8 [get_ports {mipi_phy_if_data_p[1]}]
+set_property PACKAGE_PIN AC8 [get_ports {mipi_phy_if_data_n[1]}]
+
+################################################################################
+#  CAM1 Control Signals — BANK24 (3.3 V)
+#  Confirmed from J23 pin table and official ALINX mipi.xdc (cam0_* entries).
+#
+#    J23 pin 11  CAM1_GPIO  IO_L2N_24  AH14  Camera enable / GPIO
+#    J23 pin 12  CAM1_CLK   IO_L3P_24  AG13  XCLK output to OV5647 (24 MHz)
+#    J23 pin 13  CAM1_SCL   IO_L3N_24  AH13  SCCB / I2C clock (from PS EMIO)
+#    J23 pin 14  CAM1_SDA   IO_L4P_24  AE13  SCCB / I2C data  (from PS EMIO)
+#
+#  cam1_clk (XCLK) must be driven at 24 MHz from a Clocking Wizard output.
+#  OV5647 requires XCLK before it will respond on SCCB.
+################################################################################
+
+set_property PACKAGE_PIN AH14 [get_ports cam1_gpio]
+set_property PACKAGE_PIN AG13 [get_ports cam1_clk]
+set_property PACKAGE_PIN AH13 [get_ports cam1_scl]
+set_property PACKAGE_PIN AE13 [get_ports cam1_sda]
+set_property IOSTANDARD LVCMOS33 [get_ports {cam1_gpio cam1_clk cam1_scl cam1_sda}]
+
+# cam1_clk is a clock output driven by the Clocking Wizard — mark it as a
+# generated clock so the timing engine tracks it correctly.
+# Replace clk_wiz_inst/clk_out_24m with the actual Clocking Wizard output net
+# name from your block design.
+# create_generated_clock -name cam1_xclk -source [get_pins clk_wiz_inst/clk_out_24m] \
+#     -divide_by 1 [get_ports cam1_clk]

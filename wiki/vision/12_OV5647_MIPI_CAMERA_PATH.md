@@ -30,8 +30,8 @@
 ┌─────────────┐   15-pin FPC ribbon    ┌──────────────────────────────────┐
 │  OV5647     │   (CLK±, D0±, D1±,     │  AXU2CGB-E carrier board         │
 │  sensor     │    SDA, SCL, PWR, EN)  │                                  │
-│  (Pi V1)    │───────────────────────►│  BANK65 (HP, 1.2 V) ── MIPI Rx  │
-└─────────────┘                        │  BANK43 (3.3 V)    ── SCCB ctrl  │
+│  (Pi V1)    │───────────────────────►│  BANK64 (HP, 1.2 V) ── MIPI Rx  │
+└─────────────┘                        │  BANK24 (3.3 V)    ── SCCB ctrl  │
                                        │                                  │
                                        │  Zynq UltraScale+ ZU2CG          │
                                        │  ┌──────────────────────────┐    │
@@ -256,7 +256,7 @@ The Zynq UltraScale+ has two kinds of high-speed I/O:
 
 The Vivado MIPI CSI-2 Rx Subsystem instantiates the D-PHY receiver using **SelectIO LVDS primitives** (`IBUFDS`, `IDDR`, `IODELAY`) in the HP I/O banks. This is why the MIPI connector must land on an **HP bank** (1.0–1.8 V capable) — HD banks (1.2–3.3 V) do not have the LVDS/DDR primitives needed.
 
-On the AXU2CGB-E, the MIPI connector is on **BANK65** (HP, 1.2 V) — correct for D-PHY.
+On the AXU2CGB-E, the MIPI1 connector (J23) is on **BANK64** (HP, 1.2 V) — correct for D-PHY.
 
 ---
 
@@ -308,54 +308,61 @@ Between packets, the lanes return to LP state. The clock lane may keep running o
 
 ---
 
-## 6. The AXU2CGB-E MIPI Connector
+## 6. The AXU2CGB-E MIPI Connectors
 
-From the ALINX AXU2CGB-E user manual (Part 3.11), **confirmed against the J24 pin assignment table**:
+The board has two MIPI connectors — **J23 (MIPI1)** and **J24 (MIPI2)**. The camera is connected to **J23 (MIPI1)** for this project. Both connectors have the same pin structure; only the ZYNQ package pin numbers differ.
 
-| Parameter | Value |
-|-----------|-------|
-| Connector | 15-pin FPC (flat flexible cable), connector J24 |
-| Data lanes | 2 (lane 0 and lane 1) |
-| Clock lane | 1 differential pair |
-| Differential I/O bank | **BANK65** (HP, 1.2 V) — data and clock lanes |
-| Control signal bank | **BANK24** (3.3 V) — XCLK, SCCB SCL/SDA, GPIO |
-| 3.3 V power | Pin 15 (VCC_3V3) |
+| Parameter | MIPI1 J23 (active) | MIPI2 J24 (reference) |
+|-----------|--------------------|-----------------------|
+| Differential I/O bank | **BANK64** (HP, 1.2 V) | BANK65 (HP, 1.2 V) |
+| Control signal bank | **BANK24** (3.3 V) | BANK24 (3.3 V) |
+| XDC file | [`src/constraints/mipi1.xdc`](../../src/constraints/mipi1.xdc) | [`src/constraints/mipi2.xdc`](../../src/constraints/mipi2.xdc) |
 
-### Confirmed J24 pin assignment (AXU2CGB-E user manual, Figure 15)
+### Confirmed J23 pin assignment — MIPI1 (active connector)
 
-| J24 pin | Signal name | ZYNQ pin name | ZYNQ pin # | Description |
+Source: ALINX AXU2CGA/B User Manual Part 14, verified against official `mipi.xdc` cam0_* entries.
+
+| J23 pin | Signal name | ZYNQ pin name | ZYNQ pin # | Description |
 |---------|-------------|---------------|------------|-------------|
 | 1 | GND | — | — | Ground |
-| 2 | MIPI2_LAN0_N | IO_L2N_65 | V9 | Data lane 0 − |
-| 3 | MIPI2_LAN0_P | IO_L2P_65 | U9 | Data lane 0 + |
+| 2 | MIPI1_LAN0_N | IO_L2N_64 | AE8 | Data lane 0 − |
+| 3 | MIPI1_LAN0_P | IO_L2P_64 | AE9 | Data lane 0 + |
 | 4 | GND | — | — | Ground |
-| 5 | MIPI2_LAN1_N | IO_L3N_65 | V8 | Data lane 1 − |
-| 6 | MIPI2_LAN1_P | IO_L3P_65 | U8 | Data lane 1 + |
+| 5 | MIPI1_LAN1_N | IO_L3N_64 | AC8 | Data lane 1 − |
+| 6 | MIPI1_LAN1_P | IO_L3P_64 | AB8 | Data lane 1 + |
 | 7 | GND | — | — | Ground |
-| 8 | MIPI2_CLK_N | IO_L1N_65 | Y8 | D-PHY clock lane − |
-| 9 | MIPI2_CLK_P | IO_L1P_65 | W8 | D-PHY clock lane + |
+| 8 | MIPI1_CLK_N | IO_L1N_64 | AD9 | D-PHY clock lane − |
+| 9 | MIPI1_CLK_P | IO_L1P_64 | AC9 | D-PHY clock lane + |
 | 10 | GND | — | — | Ground |
-| 11 | CAM2_GPIO | IO_L5P_24 | AD15 | Camera enable / GPIO |
-| 12 | CAM2_CLK | IO_L6P_24 | AC14 | **XCLK output to OV5647** (drive at 24 MHz) |
-| 13 | CAM2_SCL | IO_L5N_24 | AD14 | SCCB / I2C clock |
-| 14 | CAM2_SDA | IO_L6N_24 | AC13 | SCCB / I2C data |
+| 11 | CAM1_GPIO | IO_L2N_24 | AH14 | Camera enable / GPIO |
+| 12 | CAM1_CLK | IO_L3P_24 | AG13 | **XCLK output to OV5647** (drive at 24 MHz) |
+| 13 | CAM1_SCL | IO_L3N_24 | AH13 | SCCB / I2C clock |
+| 14 | CAM1_SDA | IO_L4P_24 | AE13 | SCCB / I2C data |
 | 15 | VCC_3V3 | — | — | 3.3 V power to camera module |
 
-> The XDC constraints for all these pins are in [`src/constraints/mipi2.xdc`](../../src/constraints/mipi2.xdc).
+### J24 pin assignment — MIPI2 (reference only)
+
+| J24 pin | Signal name | ZYNQ pin # | Description |
+|---------|-------------|------------|-------------|
+| 2/3 | MIPI2_LAN0_N/P | V9 / U9 | Data lane 0 |
+| 5/6 | MIPI2_LAN1_N/P | V8 / U8 | Data lane 1 |
+| 8/9 | MIPI2_CLK_N/P | Y8 / W8 | D-PHY clock |
+| 12 | CAM2_CLK | AC14 | XCLK |
+| 13/14 | CAM2_SCL/SDA | AD14 / AC13 | SCCB |
 
 ### XCLK — confirmed present on pin 12 ✅
 
-**Pin 12 (CAM2_CLK, AC14, IO_L6P_24, BANK24) is the XCLK line.**
-The board routes a PL output pin to the camera's XCLK input. You must drive AC14 at 24 MHz from a Clocking Wizard output — the OV5647 will not respond on SCCB until XCLK is running.
+**Pin 12 (CAM1_CLK, AG13, IO_L3P_24, BANK24) is the XCLK line for MIPI1.**
+Drive AG13 at 24 MHz from a Clocking Wizard output. The OV5647 will not respond on SCCB until XCLK is running.
 
-In the block design, the Clocking Wizard (25 MHz PL ref → 24 MHz) output connects through an OBUF to the `cam2_clk` top-level port.
+In the block design, the Clocking Wizard (25 MHz PL ref → 24 MHz) output connects through an OBUF to the `cam1_clk` top-level port.
 
 ### Power considerations
 
 The OV5647 needs three supply rails:
 - **1.5 V core** — generated on the camera module (Pi V1 has an on-board regulator)
 - **2.8 V analog** — generated on the camera module
-- **1.8 V I/O** — the MIPI lane I/O voltage; the AXU2CGB-E provides 1.2 V on BANK65, which is within the D-PHY common-mode range
+- **1.8 V I/O** — the MIPI lane I/O voltage; the AXU2CGB-E provides 1.2 V on BANK64 (MIPI1), within the D-PHY common-mode range
 
 The Pi V1 camera module takes 3.3 V from pin 15 of the ribbon (VCC_3V3) and generates 1.5 V and 2.8 V on-board.
 
@@ -575,13 +582,53 @@ Electrically and protocol-wise it is I²C. The Linux `i2c` subsystem drives it a
 
 ### Routing on the AXU2CGB-E
 
-The MIPI connector's SCCB lines (SDA, SCL) land on **BANK43** at 3.3 V. To drive them from the PS:
+The MIPI1 connector's SCCB lines (SDA, SCL) land on **BANK24** at 3.3 V (confirmed from J23 pin table — `cam1_scl` = AH13, `cam1_sda` = AE13). To drive them from the PS:
 
-1. **Enable a PS I²C controller** in the Vivado Zynq PS block configuration (I2C0 or I2C1).
-2. **Route the I²C signals to EMIO** (not MIO) — because the SCCB pins are on PL I/O (BANK43), not on MIO pins. EMIO extends the PS I²C controller through the PL to package pins.
-3. In the XDC, constrain the EMIO I²C SCL/SDA outputs to the BANK43 pins connected to the MIPI connector's SCCB lines.
+1. **Enable a PS I²C controller** in the Vivado Zynq PS block configuration — use **I2C1**.
+2. **Route the I²C signals to EMIO** (not MIO) — because the SCCB pins are on PL I/O (BANK24), not MIO pins. EMIO extends the PS I²C controller through the PL to package pins.
+3. In `mipi1.xdc`, the EMIO I²C SCL/SDA are already constrained to AH13/AE13 on BANK24.
 
-After boot, Linux sees the I²C bus as `/dev/i2c-<N>`. Use `i2cdetect -y <N>` to scan; the OV5647 should appear at address 0x36.
+### Finding the sensor: i2cdetect
+
+Once PetaLinux or your baremetal app has started and the sensor has XCLK running, use these commands to confirm the sensor is responding on the I²C bus.
+
+**Step 1 — find which bus number the EMIO I2C1 is on:**
+```bash
+i2cdetect -l
+```
+Output looks like:
+```
+i2c-0   i2c         ff020000.i2c                    I2C adapter
+i2c-1   i2c         ff030000.i2c                    I2C adapter   <- likely I2C1 EMIO
+i2c-2   i2c         ...
+```
+The EMIO I2C1 is usually `i2c-1` or `i2c-2`. Try each one.
+
+**Step 2 — scan for the OV5647 (should be at 0x36):**
+```bash
+i2cdetect -y -r 1
+```
+You'll see a grid. The OV5647 appears at address **36**:
+```
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:          -- -- -- -- -- -- -- -- -- -- -- -- --
+...
+30: -- -- -- -- -- -- 36 -- -- -- -- -- -- -- -- --
+...
+```
+If nothing appears: XCLK is not running (check `cam1_clk` Clocking Wizard output), or the ribbon cable is not seated, or the wrong bus number.
+
+**Step 3 — verify chip ID (the definitive "it's an OV5647" check):**
+
+OV5647 uses 16-bit register addresses, so use `i2ctransfer` instead of `i2cget`:
+```bash
+# Register 0x300A = chip ID high byte → should return 0x56
+i2ctransfer -y 1 w2@0x36 0x30 0x0a r1
+
+# Register 0x300B = chip ID low byte → should return 0x47
+i2ctransfer -y 1 w2@0x36 0x30 0x0b r1
+```
+`0x56` + `0x47` = `"VG"` in ASCII = **OV5647** confirmed. If you get `0xFF` or an error, the sensor is not responding — recheck power (VCC_3V3 on pin 15), XCLK, and ribbon orientation.
 
 ### Pull-ups
 
@@ -641,7 +688,7 @@ The minimal block design to verify the MIPI data path:
 
 1. Open Vivado → **Create Project** → RTL Project.
 2. Part: `xczu2cg-sfvc784-1-e` (note: `-1-e`, not `-1-i`).
-3. Add `src/constraints/mipi2.xdc` as a constraint source (tick "Copy into project").
+3. Add `src/constraints/mipi1.xdc` as a constraint source (tick "Copy into project").
 4. Do not add any RTL sources yet — the MIPI Rx IP wraps everything.
 
 #### B. Create the block design
@@ -653,7 +700,7 @@ The minimal block design to verify the MIPI data path:
    - **PS-PL Interfaces → Master AXI HPM0 FPD**: enable (for MIPI IP register access from PS).
 4. Still in the Zynq config → **I/O Configuration → I/O Peripherals → I2C**:
    - Enable **I2C1** → route to **EMIO** (not MIO — the SCCB pins are on PL BANK24, not MIO).
-   - This exposes `iic_1` ports on the block design which you'll connect to `cam2_scl`/`cam2_sda` through top-level ports.
+   - This exposes `iic_1` ports on the block design which you'll connect to `cam1_scl`/`cam1_sda` through top-level ports.
 5. Click OK.
 
 #### C. Add the Clocking Wizard
@@ -667,7 +714,7 @@ The minimal block design to verify the MIPI data path:
      |--------|-----------|---------|
      | `clk_out1` | 200 MHz | D-PHY reference clock (required by MIPI Rx IP) |
      | `clk_out2` | 100 MHz | Video/AXI-Stream processing clock |
-     | `clk_out3` | 24 MHz | XCLK for OV5647 sensor (drives AC14 / `cam2_clk`) |
+     | `clk_out3` | 24 MHz | XCLK for OV5647 sensor (drives AG13 / `cam1_clk`) |
 3. Connect `clk_in1` to `pl_ref_clk` external port (create port, 25 MHz input).
 
 #### D. Add the MIPI CSI-2 Receiver Subsystem IP
@@ -706,9 +753,9 @@ The minimal block design to verify the MIPI data path:
 
 #### G. Add the XCLK and I2C output ports
 
-1. Add output port `cam2_clk` (1-bit output). Connect to `clk_out3` (24 MHz) through a Utility Buffer (OBUF).
-2. Add output port `cam2_scl`, `cam2_sda` — connect to the Zynq `IIC1_SCL_O` / `IIC1_SDA_O` EMIO outputs.
-3. Add output port `cam2_gpio` — tie to `1` for now (holds camera out of reset).
+1. Add output port `cam1_clk` (1-bit output). Connect to `clk_out3` (24 MHz) through a Utility Buffer (OBUF).
+2. Add output port `cam1_scl`, `cam1_sda` — connect to the Zynq `IIC1_SCL_O` / `IIC1_SDA_O` EMIO outputs.
+3. Add output port `cam1_gpio` — tie to `1` for now (holds camera out of reset).
 
 #### H. Validate and generate
 
@@ -726,7 +773,7 @@ Once the block design is valid:
 
 1. Flow Navigator → **Synthesis → Run Synthesis**.
 2. When done: **Open Synthesized Design**.
-3. Check the **Device view** — confirm the MIPI pins (W8/Y8/U8/V8/U9/V9) appear in BANK65 and the control pins (AC14/AC13/AD14/AD15) appear in BANK24. If any pin is red/unassigned, the XDC is not being applied — verify `mipi2.xdc` is listed under **Sources → Constraints**.
+3. Check the **Device view** — confirm the MIPI pins (AC9/AD9/AB8/AC8/AE9/AE8) appear in BANK64 and the control pins (AG13/AH13/AE13/AH14) appear in BANK24. If any pin is red/unassigned, the XDC is not being applied — verify `mipi1.xdc` is listed under **Sources → Constraints**.
 4. Check **Utilization** — verify BRAM/LUT/FF counts look reasonable for the IP.
 
 #### J. Run Implementation
@@ -778,7 +825,7 @@ In `src/main.c` of the `ov5647_init` app:
 #include "xil_printf.h"
 #include "sleep.h"
 
-#define IIC_DEVICE_ID   XPAR_XIICPS_1_DEVICE_ID   // I2C1 → EMIO → cam2_scl/sda
+#define IIC_DEVICE_ID   XPAR_XIICPS_1_DEVICE_ID   // I2C1 → EMIO → cam1_scl/sda
 #define OV5647_ADDR     0x36                        // 7-bit I2C address
 
 static XIicPs iic;
@@ -829,6 +876,131 @@ int main(void) {
 3. **Set up a trigger**: probe1 (tvalid) = rising edge.
 4. Click **Run Trigger**. If the sensor is streaming, the ILA captures immediately.
 5. See §11 for what to look for in the waveform.
+
+---
+
+### UART logging — real-time stats via PuTTY
+
+The ILA gives you one snapshot. For continuous feedback ("is data still arriving while I move the sensor?") use UART logging from the Vitis app. `xil_printf()` output goes through the board's USB-to-UART chip to PuTTY — completely independent of JTAG.
+
+```
+[Vitis app: xil_printf()]
+        │
+        ▼
+  PS UART (MIO pins)
+        │
+        ▼
+  USB-to-UART on board (MINI USB port, separate from JTAG port)
+        │  USB cable
+        ▼
+  PuTTY (115200 8N1)   ← you read output here in real time
+```
+
+**PuTTY settings:** Connection type = Serial, Speed = 115200, Data = 8, Stop = 1, Parity = None, Flow = None. Port = whatever COM port the MINI USB shows up as (Windows Device Manager → Silicon Labs CP210x or CH340).
+
+#### Add two AXI GPIO IPs to the block design (for counter readback)
+
+After step F (ILA), add these two IPs to expose `mipi_stats` counters to the PS:
+
+1. Add IP → **AXI GPIO** (first instance):
+   - Name it `axi_gpio_frame`.
+   - Configure: GPIO Width = 32, All Inputs = ✅, 1 channel.
+   - Connect `GPIO_I[31:0]` to `frame_cnt[31:0]` output of `mipi_stats`.
+   - Connect to AXI Interconnect from `M_AXI_HPM0_FPD`.
+2. Add IP → **AXI GPIO** (second instance):
+   - Name it `axi_gpio_pixel`.
+   - Configure: GPIO Width = 32, All Inputs = ✅.
+   - Connect `GPIO_I[31:0]` to `pixel_cnt[31:0]` output of `mipi_stats`.
+   - Connect to same AXI Interconnect.
+3. Connect both clocks to `clk_out2` (100 MHz).
+
+After re-exporting the `.xsa`, Vitis auto-generates `XPAR_AXI_GPIO_0_DEVICE_ID` and `XPAR_AXI_GPIO_1_DEVICE_ID` in `xparameters.h`.
+
+#### Vitis UART logging code
+
+Replace the `main.c` from step N with this version — it streams live stats to PuTTY every 500 ms:
+
+```c
+#include "xparameters.h"
+#include "xgpio.h"
+#include "xiicps.h"
+#include "xil_printf.h"
+#include "sleep.h"
+
+// Check xparameters.h after export — IDs may differ
+#define GPIO_FRAME_ID   XPAR_AXI_GPIO_0_DEVICE_ID
+#define GPIO_PIXEL_ID   XPAR_AXI_GPIO_1_DEVICE_ID
+#define IIC_DEVICE_ID   XPAR_XIICPS_1_DEVICE_ID
+#define OV5647_ADDR     0x36
+
+static XGpio  gpio_frame, gpio_pixel;
+static XIicPs iic;
+
+static int ov5647_write(u16 reg, u8 val) {
+    u8 buf[3] = { (reg >> 8) & 0xFF, reg & 0xFF, val };
+    return XIicPs_MasterSendPolled(&iic, buf, 3, OV5647_ADDR);
+}
+
+int main(void) {
+    // Init I2C
+    XIicPs_Config *cfg = XIicPs_LookupConfig(IIC_DEVICE_ID);
+    XIicPs_CfgInitialize(&iic, cfg, cfg->BaseAddress);
+    XIicPs_SetSClk(&iic, 100000);   // 100 kHz SCCB
+
+    // Init GPIO readers
+    XGpio_Initialize(&gpio_frame, GPIO_FRAME_ID);
+    XGpio_Initialize(&gpio_pixel, GPIO_PIXEL_ID);
+    XGpio_SetDataDirection(&gpio_frame, 1, 0xFFFFFFFF); // all inputs
+    XGpio_SetDataDirection(&gpio_pixel, 1, 0xFFFFFFFF);
+
+    xil_printf("\r\n=== OV5647 MIPI bring-up ===\r\n");
+
+    // Soft reset then stream on
+    ov5647_write(0x0103, 0x01);
+    usleep(10000);
+    ov5647_write(0x0100, 0x01);
+
+    xil_printf("OV5647 streaming. Move the sensor and watch below.\r\n\r\n");
+
+    u32 prev_frame = 0;
+    u32 prev_pixel = 0;
+
+    while (1) {
+        u32 frames = XGpio_DiscreteRead(&gpio_frame, 1);
+        u32 pixels = XGpio_DiscreteRead(&gpio_pixel, 1);
+        u32 new_frames = frames - prev_frame;
+        u32 new_pixels = pixels - prev_pixel;
+
+        xil_printf("frames=%lu (+%lu)  pixels=%lu (+%lu)  %s\r\n",
+            frames, new_frames, pixels, new_pixels,
+            new_frames > 0 ? "STREAMING" : "*** NO DATA ***");
+
+        prev_frame = frames;
+        prev_pixel = pixels;
+        usleep(500000);     // update every 500 ms
+    }
+}
+```
+
+#### What you'll see in PuTTY
+
+When the sensor is pointing at a scene at 30 fps:
+```
+=== OV5647 MIPI bring-up ===
+OV5647 streaming. Move the sensor and watch below.
+
+frames=0 (+0)    pixels=0 (+0)          *** NO DATA ***
+frames=15 (+15)  pixels=32400000 (+32400000)  STREAMING
+frames=30 (+15)  pixels=64800000 (+32400000)  STREAMING
+frames=45 (+15)  pixels=97200000 (+32400000)  STREAMING
+```
+~15 new frames every 500 ms = 30 fps. Cover the lens or unplug the ribbon — `new_frames` drops to 0 and you see `*** NO DATA ***` immediately. This gives you live feedback while physically handling the camera.
+
+| ILA | UART logging | Use for |
+|-----|-------------|---------|
+| One-shot snapshot | Continuous stream | ILA: confirm signal correctness once |
+| Freeze on trigger | Updates every 500 ms | UART: watch it react to sensor movement |
+| Shows raw tdata values | Shows frame/pixel counts | Both together = full picture |
 
 ### Why the ILA, not HDMI, for first bring-up
 
@@ -902,7 +1074,7 @@ If your ILA FIFO or downstream consumer is not ready, `tready` goes low and `tva
 | I²C finds 0x36 but writes have no effect | Wrong register address format (16-bit vs 8-bit), or sensor in reset | Ensure you write `[reg_hi, reg_lo, data]` as a 3-byte block; check `0x3008` is not 0x82 (reset) |
 | Sensor configured but no MIPI activity (CLK lane idle) | MIPI not enabled, PLL not running, XCLK missing | Check `0x300E`, `0x4800`, `0x3016`; verify XCLK with a scope on the sensor's XCLK pin |
 | MIPI clock present but no data lane activity | Lanes not enabled, or sensor in sleep | Check `0x3016`/`0x3017` lane enable bits; check `0x4202` (sleep mode) |
-| MIPI Rx IP reports no valid packets | Pin constraints wrong, bank voltage wrong, signal integrity | Recheck XDC pin assignments against the ALINX schematic; verify BANK65 VCCO = 1.2 V; check cable seating |
+| MIPI Rx IP reports no valid packets | Pin constraints wrong, bank voltage wrong, signal integrity | Recheck XDC pin assignments against the ALINX schematic; verify BANK64 VCCO = 1.2 V; check cable seating |
 | `tvalid` toggles but `tuser` never pulses | FS short packet not sent or not decoded | Check OV5647 `0x4800` bit 4 (line sync); check IP VC configuration |
 | `tdata` all zeros | Sensor not exposing, or in test pattern mode | Check AEC/exposure registers; disable test pattern |
 | `tdata` looks like garbage | RAW8/RAW10 mismatch between sensor config and IP config | Ensure both sides agree on RAW8 or RAW10; check the IP's data type setting |
@@ -1000,10 +1172,10 @@ For first visual confirmation, route to DDR and save a frame as a PNG from PetaL
 - [ ] **Ribbon cable pinout verified** — ALINX 15-pin FPC pinout matches your camera module's pinout (pin-by-pin comparison against the schematic)
 - [ ] **SCCB working** — `i2cdetect` finds the OV5647 at 0x36 from PetaLinux
 - [ ] **XCLK source confirmed** — the OV5647 has a 24 MHz (or other) input clock, either from the module's on-board oscillator or from a PL clock output pin
-- [ ] **Power rails correct** — 3.3 V on the module (Pi V1 generates 1.5 V and 2.8 V internally); BANK65 at 1.2 V for MIPI; BANK43 at 3.3 V for SCCB
-- [ ] **Vivado part** — `xczu2cg-sfvc784e-1-e` (verify exact speed grade and package from your board)
-- [ ] **MIPI CSI-2 Rx Subsystem configured** — 2 lanes, RAW10 (or RAW8), D-PHY LVDS, target bank 65
-- [ ] **XDC constraints written** — MIPI lane pins (CLK±, D0±, D1±) on BANK65 with correct IOSTANDARD; SCCB pins on BANK43
+- [ ] **Power rails correct** — 3.3 V on the module (Pi V1 generates 1.5 V and 2.8 V internally); BANK64 at 1.2 V for MIPI1 (J23); BANK24 at 3.3 V for SCCB
+- [ ] **Vivado part** — `xczu2cg-sfvc784-1-e` (verify exact speed grade and package from your board)
+- [ ] **MIPI CSI-2 Rx Subsystem configured** — 2 lanes, RAW10 (or RAW8), D-PHY LVDS, target bank 64 (MIPI1/J23)
+- [ ] **XDC constraints written** — use [`src/constraints/mipi1.xdc`](../../src/constraints/mipi1.xdc); MIPI lane pins (CLK±, D0±, D1±) on BANK64; SCCB pins (AH13/AE13) on BANK24
 - [ ] **Clocking verified** — Clocking Wizard generates the IP's required clocks from FCLK0; frequencies match PG232
 - [ ] **ILA attached** — probing `tdata`, `tvalid`, `tlast`, `tuser`, `tready` on the MIPI Rx output
 - [ ] **OV5647 register sequence ready** — pulled from the Linux `ov5647.c` driver for your target resolution; PLL values matched to your XCLK
