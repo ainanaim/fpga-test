@@ -1,6 +1,6 @@
 # 12 — OV5647 MIPI Camera Path on the AXU2CGB
 
-> The concrete data path from an OmniVision OV5647 (Raspberry Pi Camera V1 sensor) through a 15-pin MIPI CSI-2 ribbon cable into the Zynq UltraScale+ ZU2CG on the ALINX AXU2CGB-E board. This document covers MIPI CSI-2 fundamentals, the D-PHY physical layer, the Vivado MIPI CSI-2 Receiver Subsystem IP, the OV5647 register bring-up sequence, and the ILA-based bring-up workflow.
+> The concrete data path from an OmniVision OV5647 (Raspberry Pi Camera V1 sensor) through a 15-pin MIPI CSI-2 ribbon cable into the Zynq UltraScale+ ZU2CG on the ALINX AXU2CGB board. This document covers MIPI CSI-2 fundamentals, the D-PHY physical layer, the Vivado MIPI CSI-2 Receiver Subsystem IP, the OV5647 register bring-up sequence, and the ILA-based bring-up workflow.
 >
 > **Prerequisite reading**: [06 — Vision on FPGAs](./06_VISION_ON_FPGA.md) (pixel formats, pipeline architecture), [10 — Zynq UltraScale+ Reference](../hardware/10_ZYNQ_ULTRASCALE_REFERENCE.md) (PS/PL interfaces), [11 — Video Processing Fundamentals](./11_VIDEO_PROCESSING_FUNDAMENTALS.md) §16 (DVP receiver FSM — the parallel counterpart to the MIPI path described here).
 
@@ -12,7 +12,7 @@
 3. [MIPI CSI-2 Fundamentals — The Protocol Layer](#3-mipi-csi-2-fundamentals--the-protocol-layer)
 4. [D-PHY — The Physical Layer](#4-d-phy--the-physical-layer)
 5. [How the OV5647 Uses MIPI CSI-2](#5-how-the-ov5647-uses-mipi-csi-2)
-6. [The AXU2CGB-E MIPI Connector](#6-the-axu2cgb-e-mipi-connector)
+6. [The AXU2CGB MIPI Connectors](#6-the-axu2cgb-mipi-connectors)
 7. [The Vivado MIPI CSI-2 Receiver Subsystem IP](#7-the-vivado-mipi-csi-2-receiver-subsystem-ip)
 8. [OV5647 Register Bring-Up Sequence](#8-ov5647-register-bring-up-sequence)
 9. [SCCB Control Channel on the AXU2CGB](#9-sccb-control-channel-on-the-axu2cgb)
@@ -28,7 +28,7 @@
 
 ```
 ┌─────────────┐   15-pin FPC ribbon    ┌──────────────────────────────────┐
-│  OV5647     │   (CLK±, D0±, D1±,     │  AXU2CGB-E carrier board         │
+│  OV5647     │   (CLK±, D0±, D1±,     │  AXU2CGB carrier board         │
 │  sensor     │    SDA, SCL, PWR, EN)  │                                  │
 │  (Pi V1)    │───────────────────────►│  BANK64 (HP, 1.2 V) ── MIPI Rx  │
 └─────────────┘                        │  BANK24 (3.3 V)    ── SCCB ctrl  │
@@ -256,7 +256,7 @@ The Zynq UltraScale+ has two kinds of high-speed I/O:
 
 The Vivado MIPI CSI-2 Rx Subsystem instantiates the D-PHY receiver using **SelectIO LVDS primitives** (`IBUFDS`, `IDDR`, `IODELAY`) in the HP I/O banks. This is why the MIPI connector must land on an **HP bank** (1.0–1.8 V capable) — HD banks (1.2–3.3 V) do not have the LVDS/DDR primitives needed.
 
-On the AXU2CGB-E, the MIPI1 connector (J23) is on **BANK64** (HP, 1.2 V) — correct for D-PHY.
+On the AXU2CGB, the MIPI1 connector (J23) is on **BANK64** (HP, 1.2 V) — correct for D-PHY.
 
 ---
 
@@ -308,7 +308,7 @@ Between packets, the lanes return to LP state. The clock lane may keep running o
 
 ---
 
-## 6. The AXU2CGB-E MIPI Connectors
+## 6. The AXU2CGB MIPI Connectors
 
 The board has two MIPI connectors — **J23 (MIPI1)** and **J24 (MIPI2)**. The camera is connected to **J23 (MIPI1)** for this project. Both connectors have the same pin structure; only the ZYNQ package pin numbers differ.
 
@@ -383,7 +383,7 @@ In the block design, the Clocking Wizard (25 MHz PL ref → 24 MHz) output conne
 The OV5647 needs three supply rails:
 - **1.5 V core** — generated on the camera module (Pi V1 has an on-board regulator)
 - **2.8 V analog** — generated on the camera module
-- **1.8 V I/O** — the MIPI lane I/O voltage; the AXU2CGB-E provides 1.2 V on BANK64 (MIPI1), within the D-PHY common-mode range
+- **1.8 V I/O** — the MIPI lane I/O voltage; the AXU2CGB provides 1.2 V on BANK64 (MIPI1), within the D-PHY common-mode range
 
 The Pi V1 camera module takes 3.3 V from pin 15 of the ribbon (VCC_3V3) and generates 1.5 V and 2.8 V on-board.
 
@@ -403,7 +403,7 @@ You configure it through the Vivado IP customisation dialog and connect it in th
 
 ### Key configuration parameters
 
-| Parameter | Value for OV5647 on AXU2CGB-E | Notes |
+| Parameter | Value for OV5647 on AXU2CGB | Notes |
 |-----------|------------------------------|-------|
 | Number of lanes | **2** | OV5647 uses 2 data lanes |
 | Data rate per lane | Set to match OV5647 output (e.g. 800 Mbps/lane for 1080p30 RAW10) | Calculated from resolution × fps × bits / lanes / 2 (DDR) |
@@ -619,7 +619,7 @@ SCCB (Serial Camera Control Bus) is OmniVision's I²C-compatible 2-wire serial b
 
 Electrically and protocol-wise it is I²C. The Linux `i2c` subsystem drives it as a normal I²C bus. The only nuance: SCCB traditionally uses a simplified I²C variant (no repeated start, fixed read sequence), but in practice the standard Linux I²C driver works with OmniVision sensors without modification.
 
-### Routing on the AXU2CGB-E
+### Routing on the AXU2CGB
 
 The MIPI1 connector's SCCB lines (SDA, SCL) land on **BANK24** at 3.3 V (confirmed from J23 pin table — `cam1_i2c_scl_io` = AH13, `cam1_i2c_sda_io` = AE13). To drive them from the FPGA:
 

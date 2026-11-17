@@ -1,7 +1,7 @@
 # =============================================================================
 #  vivado/create_mipi_bringup.tcl
 #
-#  Creates the MIPI1/J23 OV5647 bring-up project for ALINX AXU2CGB-E.
+#  Creates the MIPI1/J23 OV5647 bring-up project for ALINX AXU2CGB.
 #  Target part : xczu2cg-sfvc784-1-e
 #
 #  Usage — from Vivado Tcl console (repo root as working directory):
@@ -122,7 +122,7 @@ connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0] [get_bd_pins clk_wiz_0
 # ---------------------------------------------------------------------------
 # 3e.  MIPI CSI-2 Receiver Subsystem  (PG232)
 #       2 lanes, RAW8, D-PHY mode, 400 Mbps
-#       Pin locations confirmed from AXU2CGB-E BANK64 schematic.
+#       Pin locations confirmed from AXU2CGB BANK64 schematic.
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv [find_ip mipi_csi2_rx_subsystem] mipi_csi2_rx_subsystem_0
 set_property -dict [list \

@@ -1,18 +1,18 @@
 # Learning Path — From Zero to MIPI Camera Verification
 
 > A personalized, minimal step-by-step plan for getting the OV5647 MIPI camera
-> verified on the **AXU2CGB-E** board. Built from the translated ALINX tutorials
+> verified on the **AXU2CGB** board. Built from the translated ALINX tutorials
 > and the `mipi_verify` modules.
 >
-> **Board:** AXU2CGB-E · **Chip:** `xczu2cg-sfvc784-1-e` · **Goal:** prove MIPI
+> **Board:** AXU2CGB · **Chip:** `xczu2cg-sfvc784-1-e` · **Goal:** prove MIPI
 > video data moves correctly through the PL.
 
 ---
 
 ## Before You Start — Hardware Checklist
 
-- [ ] Confirm board is AXU2CGB-E (silkscreen or invoice).
-- [ ] **XCLK check (critical):** look up the AXU2CGB-E schematic (Figure 3-11-1
+- [ ] Confirm board is AXU2CGB (silkscreen or invoice).
+- [ ] **XCLK check (critical):** look up the AXU2CGB schematic (Figure 3-11-1
       in the user manual, or the `AXU2CGB/hardware_axu2cgb` GitHub repo) and
       confirm whether the MIPI connector routes an XCLK pin to a PL output.
       The OV5647 Pi V1 module has **no on-board oscillator** — it needs 24 MHz
@@ -108,7 +108,7 @@ This is where your actual goal lives. Phases 0-1 were just the prerequisite.
 
 - [ ] Read [`12_OV5647_MIPI_CAMERA_PATH.md`](../vision/12_OV5647_MIPI_CAMERA_PATH.md)
       §1-5 — MIPI CSI-2 fundamentals, D-PHY, packet structure. Conceptual.
-- [ ] Read §6 — the AXU2CGB-E MIPI connector (BANK65 for lanes, BANK43 for
+- [ ] Read §6 — the AXU2CGB MIPI connector (BANK65 for lanes, BANK43 for
       SCCB). Confirm the pinout against your schematic.
 - [ ] Read §7 — the Vivado MIPI CSI-2 Receiver Subsystem IP (PG232).
       Configuration: 2 lanes, RAW10 (or RAW8 for simpler bring-up), D-PHY
@@ -191,7 +191,7 @@ describes. Each layer isolates a failure domain.
 
 ---
 
-## Key Numbers for Your Board (AXU2CGB-E)
+## Key Numbers for Your Board (AXU2CGB)
 
 | Item | Value |
 |------|-------|

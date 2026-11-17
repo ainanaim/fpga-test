@@ -1,6 +1,6 @@
-# FPGA Vision Pipeline — AXU2CGB-E / OV5647 MIPI
+# FPGA Vision Pipeline — AXU2CGB / OV5647 MIPI
 
-FPGA-based computer vision bring-up on the **ALINX AXU2CGB-E** (Zynq UltraScale+ ZU2CG).
+FPGA-based computer vision bring-up on the **ALINX AXU2CGB** (Zynq UltraScale+ ZU2CG).
 Goal: get an **OV5647 MIPI camera** flowing through the FPGA PL, verify with RTL/ILA,
 and connect to PS/DDR software — with clean, reusable RTL that translates to ASIC design.
 
@@ -8,7 +8,7 @@ and connect to PS/DDR software — with clean, reusable RTL that translates to A
 
 | Component | Detail |
 |-----------|--------|
-| Board | ALINX AXU2CGB-E |
+| Board | ALINX AXU2CGB |
 | FPGA | Zynq UltraScale+ XCZU2CG (speed -1E) |
 | Camera | OV5647 (OmniVision, MIPI CSI-2, 2-lane, I²C/SCCB at 0x36) |
 | Camera connector | MIPI1 / J23 (BANK64 D-PHY, BANK24 control) |
@@ -117,7 +117,7 @@ i2ctransfer -y 0 w2@0x36 0x30 0x0b r1         # → 0x47 (chip ID low)
 
 - Vivado 2020.1+ (tested on 2020.1)
 - Vitis 2020.1+ (for PS application development)
-- AXU2CGB-E board with OV5647 MIPI camera (J23)
+- AXU2CGB board with OV5647 MIPI camera (J23)
 - USB UART cable (MINI USB → PC) for PuTTY
 - JTAG cable (AL321 or compatible 10-pin) — needed for ILA/debugging (not yet available)
 - SD card (FAT32) for BOOT.bin boot

@@ -1,10 +1,10 @@
 ################################################################################
 #  mipi2.xdc — J24 MIPI Interface Pin Constraints
-#  Board:  ALINX AXU2CGB-E
+#  Board:  ALINX AXU2CGB
 #  Camera: OV5647 on MIPI2 connector J24
 #
 #  Sources:
-#    - ALINX AXU2CGB-E User Manual Figure 15 (MIPI Interface J24 Pin Assignment)
+#    - ALINX AXU2CGB User Manual Figure 15 (MIPI Interface J24 Pin Assignment)
 #    - Official ALINX mipi.xdc (cam1_* entries):
 #      https://github.com/alinxalinx/AXU2CGA_AXU2CGB/blob/master/vivado/
 #      auto_create_project/src/constraints/mipi.xdc
@@ -44,7 +44,7 @@ create_clock -period 40.000 -name pl_ref_clk -waveform {0.000 20.000} \
 ################################################################################
 #  MIPI2 D-PHY Differential Pairs — BANK65 (HP, 1.2 V)
 #
-#  J24 connector pinout (confirmed from AXU2CGB-E user manual):
+#  J24 connector pinout (confirmed from AXU2CGB user manual):
 #    J24 pin 2  MIPI2_LAN0_N  IO_L2N_65  V9   Data lane 0 −
 #    J24 pin 3  MIPI2_LAN0_P  IO_L2P_65  U9   Data lane 0 +
 #    J24 pin 5  MIPI2_LAN1_N  IO_L3N_65  V8   Data lane 1 −

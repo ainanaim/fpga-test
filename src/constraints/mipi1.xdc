@@ -1,6 +1,6 @@
 ################################################################################
 #  mipi1.xdc — J23 MIPI Interface Pin Constraints
-#  Board:  ALINX AXU2CGB-E
+#  Board:  ALINX AXU2CGB
 #  Camera: OV5647 on MIPI1 connector J23
 #
 #  Sources:

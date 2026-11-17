@@ -2,7 +2,7 @@
 
 Layered bring-up modules that prove the OV5647 MIPI camera stream is being
 received and moved correctly through the Zynq UltraScale+ PL fabric on the
-AXU2CGB-E board.
+AXU2CGB board.
 
 Each module isolates one failure domain. Run them in order — when a layer
 fails, the bug is in that layer's logic, not in the MIPI link itself.
