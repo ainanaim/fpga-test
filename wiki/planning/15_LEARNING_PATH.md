@@ -12,12 +12,15 @@
 ## Before You Start — Hardware Checklist
 
 - [ ] Confirm board is AXU2CGB (silkscreen or invoice).
-- [ ] **XCLK check (critical):** look up the AXU2CGB schematic (Figure 3-11-1
-      in the user manual, or the `AXU2CGB/hardware_axu2cgb` GitHub repo) and
-      confirm whether the MIPI connector routes an XCLK pin to a PL output.
-      The OV5647 Pi V1 module has **no on-board oscillator** — it needs 24 MHz
-      from the board. If there is no XCLK pin, you need a different camera
-      module or an external oscillator before anything else will work.
+- [x] **XCLK check:** AXU2CGB routes a dedicated PL clock output
+      to Pin 12 on both MIPI connectors (J23 pin 12 = AG13, J24 pin 12 = AC14).
+      The OV5647 clocking depends on the camera module variant:
+      - **Raspberry Pi Camera V1 (OV5647)**: has an onboard 25 MHz crystal
+        oscillator — typically ignores Pin 12 XCLK and uses its own crystal.
+      - **Bare OV5647 module (no crystal)**: requires 24 MHz XCLK from the
+        FPGA on Pin 12.
+      Verify which module you have. If it has a crystal, XCLK output is
+      optional; if not, the Clocking Wizard must generate 24 MHz on Pin 12.
 - [ ] JTAG cable + USB-UART cable connected.
 - [ ] Boot-mode switch set to JTAG (all ON) for downloads/debug.
 - [ ] Vivado 2020.1 (or newer) installed on a Windows/Linux machine.

@@ -374,9 +374,14 @@ Source: [`alinxalinx/AXU2CGA_AXU2CGB` → `vivado/auto_create_project/src/constr
 ### XCLK — confirmed present on pin 12 ✅
 
 **Pin 12 (CAM1_CLK, AG13, IO_L3P_24, BANK24) is the XCLK line for MIPI1.**
-Drive AG13 at 24 MHz from a Clocking Wizard output. The OV5647 will not respond on SCCB until XCLK is running.
 
-In the block design, the Clocking Wizard (25 MHz PL ref → 24 MHz) output connects through an OBUF to the `cam1_clk` top-level port.
+**Clocking depends on camera module variant:**
+- **Raspberry Pi Camera V1 (OV5647)**: has an onboard 25 MHz crystal oscillator — typically ignores Pin 12 XCLK and uses its own crystal. XCLK output from FPGA is optional.
+- **Bare OV5647 module (no crystal)**: requires 24 MHz XCLK from the FPGA on Pin 12. The OV5647 will not respond on SCCB until XCLK is running.
+
+**For this project**: If your camera module has an onboard crystal (check for a small silver component near the sensor), you can leave `cam1_clk` unconnected or tie it low. If it has no crystal, drive AG13 at 24 MHz from a Clocking Wizard output.
+
+In the block design, the Clocking Wizard (25 MHz PL ref → 24 MHz) output connects through an OBUF to the `cam1_clk` top-level port. This is only needed for bare modules without onboard oscillators.
 
 ### Power considerations
 
