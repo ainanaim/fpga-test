@@ -72,8 +72,8 @@ set_property -dict [list \
     CONFIG.PSU__FCLK0__PERIPHERAL__FREQMHZ        {100}        \
     CONFIG.PSU__USE__M_AXI_GP0                    {1}          \
     CONFIG.PSU__MAXIGP0__DATA_WIDTH               {32}         \
-    CONFIG.PSU__UART0__PERIPHERAL__ENABLE         {1}          \
-    CONFIG.PSU__UART0__PERIPHERAL__IO             {MIO 42 .. 43} \
+    CONFIG.PSU__UART1__PERIPHERAL__ENABLE         {1}          \
+    CONFIG.PSU__UART1__PERIPHERAL__IO             {MIO 24 .. 25} \
     CONFIG.PSU__SD1__PERIPHERAL__ENABLE           {1}          \
     CONFIG.PSU__SD1__PERIPHERAL__IO               {MIO 46 .. 51} \
     CONFIG.PSU__SD1__GRP_CD__ENABLE               {1}          \
