@@ -46,7 +46,6 @@ Phase 5: Advanced Pipeline
 **Remaining:**
 - [ ] Boot from SD card → check PuTTY for `frames=N` output
 - [ ] Confirm MIPI stream active (frame counter increments)
-- [ ] If silent: check UART MIO (UART1 24-25 vs UART0 42-43), XCLK, ribbon seating
 
 **Exit criteria:**
 - `xil_printf` shows `frames > 0` every 500ms
