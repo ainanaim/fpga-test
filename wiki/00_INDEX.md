@@ -24,14 +24,14 @@ Files are organized into five subfolders by topic. The index stays at the wiki r
 | 05 | `fundamentals/` | [Memory and Interfaces](./fundamentals/05_MEMORY_AND_INTERFACES.md) | BRAM, registers, external DRAM, AXI4 bus, DMA, streaming (AXI4-Stream) |
 | 06 | `vision/` | [Vision on FPGAs](./vision/06_VISION_ON_FPGA.md) | Image pipelines, pixel formats, video standards, key algorithms and their FPGA mapping |
 | 07 | `hardware/` | [Hardware Selection Guide](./hardware/07_HARDWARE_SELECTION.md) | Choosing an FPGA board — Zynq SoC, development boards comparison |
-| 08 | `planning/` | [Project Roadmap](./planning/08_ROADMAP.md) | Phased learning plan from zero to a working vision accelerator |
+| 08 | `progress/` | [Project Roadmap (Progress)](./progress/08_ROADMAP(PROGRESS).md) | Phased learning plan from zero to a working vision accelerator |
 | 09 | `hardware/` | [Timing Constraints (XDC) Deep Dive](./hardware/09_TIMING_CONSTRAINTS.md) | STA, create_clock, CDC constraints, multi-cycle paths, reading timing reports, closure workflow |
 | 10 | `hardware/` | [Zynq UltraScale+ Reference Summary](./hardware/10_ZYNQ_ULTRASCALE_REFERENCE.md) | Condensed summary of DS891 + UG1085: device subfamilies, PS/PL resources, AXI interfaces, clocking, DDR, boot sequence |
 | 11 | `vision/` | [Video Processing Fundamentals (Step-by-Step)](./vision/11_VIDEO_PROCESSING_FUNDAMENTALS.md) | How pixels stream through an FPGA clock-by-clock — shift registers, line buffers, sliding windows, pipeline latency/throughput, DDR when needed |
 | 12 | `vision/` | [OV5647 MIPI Camera Path on the AXU2CGB](./vision/12_OV5647_MIPI_CAMERA_PATH.md) | MIPI CSI-2 and D-PHY fundamentals, the OV5647 sensor, the AXU2CGB MIPI connector, Vivado MIPI CSI-2 Rx Subsystem IP, register bring-up, and ILA-based data path verification |
 | 13 | `tutorials/` | [Getting Started with Vitis on the ALINX Board](./tutorials/13_VITIS_GETTING_STARTED.md) | Translated step-by-step guide from the ALINX Vitis tutorial Ch.1 — Vivado PS config, export XSA, Vitis app project, JTAG run/debug, and SD/QSPI boot-image creation |
 | 14 | `tutorials/` | [ALINX FPGA Course 1 (Translated)](./tutorials/14_ALINX_FPGA_COURSE1.md) | Translated walkthrough of the entire ALINX FPGA tutorial (Course 1, 16 chapters) — ZYNQ arch, board hardware, Verilog building blocks, and PL experiments: LED, PLL, RAM, ROM, FIFO, keys, PWM, UART/RS232/RS422/RS485, HDMI, LCD |
-| 15 | `planning/` | [Learning Path — Zero to MIPI Verification](./planning/15_LEARNING_PATH.md) | Personalized minimal step-by-step plan for the AXU2CGB: which Course 1 chapters to actually build, what to skip, and how to run the mipi_verify modules to prove the OV5647 camera data path |
+| 15 | `vision/` | [Learning Path — Zero to MIPI Verification](./vision/15_LEARNING_PATH.md) | Personalized minimal step-by-step plan for the AXU2CGB: which Course 1 chapters to actually build, what to skip, and how to run the mipi_verify modules to prove the OV5647 camera data path |
 
 ### Folder structure
 
@@ -39,9 +39,9 @@ Files are organized into five subfolders by topic. The index stays at the wiki r
 wiki/
 ├── 00_INDEX.md              ← you are here
 ├── fundamentals/            ← 01-05: FPGA, digital design, HDL, toolchain, memory
-├── vision/                  ← 06, 11, 12: vision pipelines, video processing, MIPI camera
+├── vision/                  ← 06, 11, 12, 15: vision pipelines, video processing, MIPI camera, learning path
 ├── hardware/                ← 07, 09, 10: board selection, timing constraints, Zynq reference
-├── planning/                ← 08, 15: project roadmap, MIPI learning path
+├── progress/                ← 08: project roadmap and progress
 └── tutorials/               ← 13, 14: translated ALINX Vitis + FPGA courses
 ```
 
@@ -56,7 +56,7 @@ wiki/
 If you are in a hurry: **01, 02, and 08 are the absolute minimum.**
 
 For the AXU2CGB + OV5647 MIPI goal specifically, follow
-[`15_LEARNING_PATH.md`](./planning/15_LEARNING_PATH.md) instead — it tells you
+[`15_LEARNING_PATH.md`](./vision/15_LEARNING_PATH.md) instead — it tells you
 which chapters to actually build and which to skip.
 
 ---

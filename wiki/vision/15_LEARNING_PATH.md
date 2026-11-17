@@ -109,19 +109,19 @@ If you've done any Verilog before, you can probably skip Ch.3 entirely.
 
 This is where your actual goal lives. Phases 0-1 were just the prerequisite.
 
-- [ ] Read [`12_OV5647_MIPI_CAMERA_PATH.md`](../vision/12_OV5647_MIPI_CAMERA_PATH.md)
+- [ ] Read [`12_OV5647_MIPI_CAMERA_PATH.md`](./12_OV5647_MIPI_CAMERA_PATH.md)
       §1-5 — MIPI CSI-2 fundamentals, D-PHY, packet structure. Conceptual.
-- [ ] Read §6 — the AXU2CGB MIPI connector (BANK65 for lanes, BANK43 for
-      SCCB). Confirm the pinout against your schematic.
+- [ ] Read §6 — the AXU2CGB MIPI connectors (J23/MIPI1 on BANK64 for lanes,
+      BANK24 for control/SCCB; J24/MIPI2 on BANK65 for reference). Confirm
+      the pinout against your schematic.
 - [ ] Read §7 — the Vivado MIPI CSI-2 Receiver Subsystem IP (PG232).
-      Configuration: 2 lanes, RAW10 (or RAW8 for simpler bring-up), D-PHY
-      LVDS, target bank 65.
+      Configuration: 2 lanes, RAW8 (or RAW10), D-PHY LVDS, target BANK64 (J23).
 - [ ] Read §8-9 — OV5647 register bring-up + SCCB control. The I2C config
-      is done from Vitis (the PS side), not from PL. See
+      is done from Vitis (the PS side via AXI IIC or EMIO), not from PL logic. See
       [`13_VITIS_GETTING_STARTED.md`](../tutorials/13_VITIS_GETTING_STARTED.md) for the
       Vitis flow if you haven't done it yet.
 - [ ] Read §10 — Vivado block design for the MIPI Rx IP. Add the IP, connect
-      clocks (Clocking Wizard from FCLK0), wire the AXI-Stream output.
+      clocks (Clocking Wizard from 25 MHz ref clock), wire the AXI-Stream output.
 - [ ] Read §11 — ILA-based verification. This is exactly what `mipi_verify`
       implements.
 - [ ] Read §14 — checklist before writing RTL. Go through every box.
@@ -200,16 +200,19 @@ describes. Each layer isolates a failure domain.
 |------|-------|
 | Vivado part | `xczu2cg-sfvc784-1-e` |
 | PS clock | 33.333 MHz |
-| PL reference clock | 25 MHz (BANK44, 1.8 V) |
+| PL reference clock | 25 MHz (pin AB11, LVCMOS33) |
 | RTC clock | 32.768 kHz |
+| USB UART | PS UART1 (MIO 24-25, 115200 8N1) |
+| SD card | SD1 (MIO 46-51, CD on MIO 45) |
 | DDR4 | 2 GB, 64-bit, up to 2400 Mbps |
 | eMMC | 8 GB |
 | QSPI | 32 MB (256 Mb) |
-| MIPI data lanes | BANK65 (HP, 1.2 V) |
-| MIPI SCCB (I2C) | BANK43 (3.3 V), via EMIO |
+| MIPI1 data lanes (J23, active) | BANK64 (HP, 1.2 V) — AC9/AD9, AE9/AE8, AB8/AC8 |
+| MIPI2 data lanes (J24, ref) | BANK65 (HP, 1.2 V) — W8/Y8, U9/V9, U8/V8 |
+| MIPI1 SCCB & control (J23) | BANK24 (3.3 V) — AH13 (SCL), AE13 (SDA), AG13 (CLK), AH14 (GPIO) |
 | LEDs | 4× on BANK25, LVCMOS33, active-low (high = off) |
 | Keys | 4× + reset on BANK24, active-low |
-| Boot mode JTAG | all switches ON |
+| Boot mode JTAG | all switches ON (ON,ON,ON,ON) |
 | Boot mode SD | ON,OFF,ON,OFF |
 | Boot mode QSPI | ON,ON,OFF,ON |
 | Boot mode eMMC | ON,OFF,OFF,ON |
@@ -222,7 +225,7 @@ describes. Each layer isolates a failure domain.
   (PL/FPGA side, prerequisite skills).
 - [`13_VITIS_GETTING_STARTED.md`](../tutorials/13_VITIS_GETTING_STARTED.md) — translated
   Course 2 Ch.1 (Vitis/PS side, needed for I2C sensor config and DDR access).
-- [`12_OV5647_MIPI_CAMERA_PATH.md`](../vision/12_OV5647_MIPI_CAMERA_PATH.md) — the
+- [`12_OV5647_MIPI_CAMERA_PATH.md`](./12_OV5647_MIPI_CAMERA_PATH.md) — the
   MIPI-specific build (Phases 3-4).
 - [`src/rtl/mipi_verify/README.md`](../../src/rtl/mipi_verify/README.md) — the
   verification modules and their bring-up order.
