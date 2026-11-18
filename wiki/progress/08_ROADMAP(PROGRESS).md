@@ -28,7 +28,15 @@ Phase 5: Advanced Pipeline
 - Bitstream generated, BOOT.bin created
 
 **Key files:**
-- `vivado/create_mipi_bringup.tcl` — one-shot project generator
+- `vivado/create_mipi_bringup.tcl` — one-shot project generator. When sourced in Vivado's Tcl Console, it automatically:
+  1. **Creates the Vivado project**: Initializes `mipi_bringup.xpr` targeting `xczu2cg-sfvc784-1-e`.
+  2. **Loads constraints**: Automatically attaches `src/constraints/mipi1.xdc` (assigns the confirmed J23 pin locations and I/O standards).
+  3. **Builds the Block Design (`mipi_bd`)**:
+     - Configures the **Zynq UltraScale+ MPSoC** (PS): enables 100 MHz `FCLK0`, AXI `HPM0_FPD`, UART1 (`MIO 24-25`), and SD1 (`MIO 46-51`).
+     - Instantiates the **Clocking Wizard**: derives 200 MHz (D-PHY reference) and 24 MHz (XCLK) from the 25 MHz board oscillator.
+     - Instantiates the **MIPI CSI-2 Rx Subsystem (PG232)**: configured for 2-lane RAW8 D-PHY with pre-assigned BANK64 pin locations.
+     - Adds **AXI Interconnect**, **AXI IIC** (for camera SCCB/I²C control on BANK24), and **AXI4-Stream FIFO**.
+  4. **Generates wrapper & sets top**: Generates `mipi_bd_wrapper.v` so the design is ready for synthesis immediately.
 - `src/constraints/mipi1.xdc` — J23 pin constraints
 - `wiki/vision/12_OV5647_MIPI_CAMERA_PATH.md` — full camera guide
 
