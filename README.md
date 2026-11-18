@@ -136,5 +136,5 @@ i2ctransfer -y 0 w2@0x36 0x30 0x0b r1         # → 0x47 (chip ID low)
 - **Do not commit** `vivado/mipi_bringup/` — generated output, machine-specific.
   Only `vivado/create_mipi_bringup.tcl` is version-controlled.
 - The official ALINX reference repo: [alinxalinx/AXU2CGA_AXU2CGB](https://github.com/alinxalinx/AXU2CGA_AXU2CGB)
-- PS UART is on **MIO 42..43**, SD card on **MIO 46..51** (CD on MIO 45).
+- PS UART1 is on **MIO 24..25**, SD card on **MIO 46..51** (CD on MIO 45).
 - I2C/SCCB bus is **I2C0 → AXI IIC IP** → `cam1_i2c_scl_io` (AH13) / `cam1_i2c_sda_io` (AE13).
