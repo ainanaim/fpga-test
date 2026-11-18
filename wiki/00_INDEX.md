@@ -47,17 +47,26 @@ wiki/
 
 ---
 
-## Mandatory Reading Order (before writing a single line of RTL)
+## Reading Paths
+
+### For this project (AXU2CGB + OV5647 MIPI)
+
+Follow [`15_LEARNING_PATH.md`](./vision/15_LEARNING_PATH.md) — it tells you
+which Course 1 chapters to actually build, what to skip, and how to run the
+`mipi_verify` modules to prove the OV5647 camera data path.
+
+Current progress is tracked in
+[`progress/08_ROADMAP(PROGRESS).md`](./progress/08_ROADMAP(PROGRESS).md).
+
+### For general FPGA learning (from zero)
 
 ```
-01 → 02 → 03 (intro only) → 07 (choose your board) → 04 → 03 (deep dive) → 05 → 06 → 08
+01 → 02 → 03 (intro only) → 04 → 05 → 06
 ```
 
-If you are in a hurry: **01, 02, and 08 are the absolute minimum.**
+Skip `07` (board already chosen: AXU2CGB) and `08` (see progress file above).
 
-For the AXU2CGB + OV5647 MIPI goal specifically, follow
-[`15_LEARNING_PATH.md`](./vision/15_LEARNING_PATH.md) instead — it tells you
-which chapters to actually build and which to skip.
+If you are in a hurry: **01 and 02 are the absolute minimum.**
 
 ---
 
