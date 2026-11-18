@@ -32,8 +32,8 @@
 
 The FPGA starts as a blank slate. You write a **Hardware Description Language (HDL)** program, run it through a tool chain, and the tool produces a **bitstream** — a binary configuration file. When you download this bitstream to the FPGA, the internal routing and logic is set up to implement your specific circuit. The chip literally "becomes" your design.
 
-### Why this matters for vision:
-A 1080p 60 fps video stream pushes ~3 GB/s of raw pixel data. An FPGA can process every pixel of every frame in a **single clock cycle** per stage — in real time — because every processing unit you describe exists as physical hardware running in parallel.
+### Why this matters:
+High-throughput, latency-sensitive workloads benefit because every processing unit you describe exists as physical hardware running in parallel — there is no instruction fetch, no context switch, no OS jitter. For example, a 1080p 60 fps video stream pushes ~3 GB/s of raw data; an FPGA can process every element of every frame in a **single clock cycle per stage** — in real time.
 
 ---
 
@@ -55,7 +55,7 @@ This means:
 - An AND gate of 3 inputs? One LUT.
 - A 4-to-1 multiplexer? One LUT.
 - One bit of a 4-bit adder? One LUT (carry comes from the carry chain).
-- A pixel threshold comparator? One or two LUTs.
+- A threshold comparator on a data sample? One or two LUTs.
 
 Modern FPGAs contain hundreds of thousands to millions of LUTs.
 Example: Xilinx Artix-7 XC7A200T — 134,600 LUTs.
@@ -92,9 +92,9 @@ Multiplications are expensive in LUTs (a 16×16 multiply would need ~32+ LUTs). 
 | Intel Cyclone V | DSP Block | 18 × 18 → 36-bit | Yes |
 | Intel Arria 10 | DSP Block | 27 × 27 | Yes |
 
-**For vision/AI workloads, DSP slices are your most precious resource.** Convolutions, filters, matrix multiplications — all consume DSPs. Plan your architecture around DSP count.
+**For multiply-heavy workloads (filters, convolutions, matrix multiplication, FFTs), DSP slices are your most precious resource.** Plan your architecture around DSP count.
 
-A single Xilinx Zynq-7020 has **220 DSP48E1 slices** — enough for a modest CNN layer.
+A single Xilinx Zynq-7020 has **220 DSP48E1 slices** — enough for a modest neural network layer.
 
 ### 2.5 Block RAM (BRAM)
 
@@ -107,9 +107,9 @@ FPGAs contain arrays of **on-chip SRAM** called Block RAM (BRAM). Key properties
 - **No external memory controller needed** — deterministic latency
 
 BRAM is used for:
-- Line buffers in image processing (store one or more rows of pixels)
-- Frame buffers (small images only — a 640×480 grayscale frame = 2.3 Mb = ~65 BRAMs)
-- Weight storage for neural network layers
+- Line buffers in streaming data processing (store one or more rows of a frame)
+- Frame buffers (small frames only — a 640×480 grayscale frame = 2.3 Mb = ~65 BRAMs)
+- Weight/storage tables for ML layers
 - FIFOs between pipeline stages
 
 | Board | BRAM count | Total on-chip RAM |
@@ -118,7 +118,7 @@ BRAM is used for:
 | Zynq-7020 | 140 × 36 Kb | 4.9 Mb |
 | Zynq UltraScale+ ZU3EG | 216 × 36 Kb | 7.6 Mb |
 
-**For 1080p video, full frames do NOT fit in BRAM.** You will need external DDR memory and DMA — see [05_MEMORY_AND_INTERFACES.md](./05_MEMORY_AND_INTERFACES.md).
+**High-resolution frames often do NOT fit in BRAM.** You will need external DDR memory and DMA — see [05_MEMORY_AND_INTERFACES.md](./05_MEMORY_AND_INTERFACES.md).
 
 ### 2.6 Routing Fabric
 
@@ -145,7 +145,7 @@ Modern FPGAs include pre-built, hardened silicon blocks that are far more effici
 | **Video codec blocks** | H.264/H.265 encoder/decoder (some FPGAs) |
 | **ADC/DAC** (some families) | Analog I/O |
 
-For vision projects, the most relevant are: DDR controller, SERDES (for MIPI/HDMI), and ARM core (for SoC FPGAs).
+For streaming-media and embedded projects, the most relevant are: DDR controller, SERDES (for HDMI/DisplayPort), and the ARM core (for SoC FPGAs).
 
 ---
 
@@ -191,16 +191,16 @@ Configuration time: 10–500 ms depending on device size and interface speed.
 | Custom bit width | No | No (FP16/INT8) | Yes (1-bit to 64-bit) | Yes |
 | Real-time guarantee | No | No | Yes | Yes |
 
-**When FPGAs win for vision:**
-- Real-time pixel-synchronous processing (no OS jitter)
+**When FPGAs win:**
+- Real-time streaming processing (no OS jitter)
 - Custom precision arithmetic (e.g., 10-bit pixels, 12-bit weights)
-- Low-power edge deployment (Jetson uses a lot of power by comparison)
+- Low-power edge deployment
 - Research/prototyping (re-program vs tape-out for ASIC)
-- Interfacing with exotic sensors (custom timing, custom protocols)
+- Interfacing with exotic peripherals (custom timing, custom protocols)
 
 **When FPGAs lose:**
 - Complex, irregular algorithms (hard to pipeline)
-- When a GPU with OpenCV/CUDA already meets latency requirements
+- When a CPU or GPU already meets latency requirements
 - When you need IEEE 754 double precision floating point everywhere
 - Very high-volume production (ASIC is cheaper per unit at scale)
 
@@ -209,7 +209,7 @@ Configuration time: 10–500 ms depending on device size and interface speed.
 ## 5. FPGA Families You Will Encounter
 
 ### Xilinx (now AMD-Xilinx)
-| Family | Target | Key vision boards |
+| Family | Target | Common dev boards |
 |--------|--------|------------------|
 | Artix-7 | Low cost, low power | Nexys A7, Basys 3, Arty A7 |
 | Kintex-7 | Mid-range performance | KC705 |
@@ -218,7 +218,7 @@ Configuration time: 10–500 ms depending on device size and interface speed.
 | Zynq UltraScale+ MPSoC | High-end SoC | ZCU102, KV260 |
 
 ### Intel (Altera)
-| Family | Target | Key vision boards |
+| Family | Target | Common dev boards |
 |--------|--------|------------------|
 | Cyclone IV/V | Low cost | DE0-Nano, DE10-Lite |
 | Arria 10 | Mid-range | Arria 10 GX dev kit |
@@ -226,16 +226,16 @@ Configuration time: 10–500 ms depending on device size and interface speed.
 | Intel SoC FPGA | ARM + FPGA | DE10-Nano (Cyclone V SoC) |
 
 ### Lattice
-Small, low-power FPGAs. Good for glue logic and simple interfaces. Limited DSP resources for heavy vision.
+Small, low-power FPGAs. Good for glue logic and simple interfaces. Limited DSP resources for heavy workloads.
 
 ### Microchip (Microsemi)
-Radiation-hardened and mixed-signal FPGAs. Less common in academic vision projects.
+Radiation-hardened and mixed-signal FPGAs. Less common in academic projects.
 
 ---
 
 ## 6. The SoC FPGA — Best of Both Worlds
 
-For vision projects, **SoC FPGAs** (like Xilinx Zynq) are the most practical choice. They combine:
+For embedded systems needing both a processor and custom hardware, **SoC FPGAs** (like Xilinx Zynq) are often the most practical choice. They combine:
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -253,8 +253,8 @@ For vision projects, **SoC FPGAs** (like Xilinx Zynq) are the most practical cho
 └──────────────────────────────────────────────────────┘
 ```
 
-- **ARM core (PS)** handles: file I/O, Ethernet, USB, display output, Python/C application logic, ML model management
-- **FPGA fabric (PL)** handles: pixel-level processing, real-time filtering, custom accelerators
+- **ARM core (PS)** handles: file I/O, Ethernet, USB, display output, application logic, ML model management
+- **FPGA fabric (PL)** handles: real-time data-path processing, custom accelerators
 - **AXI bus** connects them with high-bandwidth, low-latency transfers
 
 This is why the **PYNQ-Z1/Z2** is popular for learning — Python runs on the ARM, and you interact with FPGA accelerators from Jupyter notebooks.
@@ -290,12 +290,16 @@ When you open a synthesis/implementation report, you will see resource utilizati
 
 1. FPGAs implement circuits, not programs — the entire design exists simultaneously in hardware.
 2. The fundamental unit is the **LUT** (logic) paired with a **FF** (state).
-3. **DSP slices** are the bottleneck for multiply-heavy workloads (convolutions, filters).
-4. **BRAM** is fast and plentiful for line buffers, but cannot hold full HD frames.
-5. **SoC FPGAs** (Zynq) pair an ARM processor with FPGA fabric — ideal for vision projects.
+3. **DSP slices** are the bottleneck for multiply-heavy workloads (filters, convolutions).
+4. **BRAM** is fast and plentiful for line buffers and small frame buffers, but cannot hold high-resolution frames.
+5. **SoC FPGAs** (Zynq) pair an ARM processor with FPGA fabric — ideal when you need a processor plus custom real-time logic.
 6. Configuration is not instantaneous: compile times can be 10 minutes to 2+ hours.
 7. Routing determines speed — keep logic close together and pipeline long paths.
 
 ---
 
 **Next**: [02 — Digital Design Prerequisites](./02_DIGITAL_DESIGN_PREREQUISITES.md)
+
+---
+
+**Vision application of this chapter**: for why the OV5647 MIPI camera project uses an FPGA (pixel bandwidth, DSP for future CNN layers, BRAM vs DDR trade-offs, SoC split between PL pixel path and PS I2C/display), see the "Why FPGA?" section in [`../vision/15_LEARNING_PATH.md`](../vision/15_LEARNING_PATH.md).

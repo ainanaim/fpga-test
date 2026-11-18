@@ -9,6 +9,32 @@
 
 ---
 
+## Why FPGA? (vision context)
+
+See [`../fundamentals/01_FPGA_FUNDAMENTALS.md`](../fundamentals/01_FPGA_FUNDAMENTALS.md)
+for the generic fundamentals; this section explains why they matter for
+camera work specifically.
+
+- **Bandwidth:** raw video is enormous. 1080p60 is ~3 GB/s; even 720p30 Bayer
+  data is ~27 MB/s sustained. Every pixel must be handled every frame —
+  an FPGA does this deterministically in hardware with no OS jitter.
+- **DSP slices:** future layers of this path (filters, edge detection,
+  eventually CNN inference on `line_buffer_passthrough`-style streams) are
+  multiply-accumulate heavy. The ZU2CG's DSP48E2 slices are the resource
+  to plan around (see §2.4 of fundamentals).
+- **BRAM vs DDR:** line buffers fit in BRAM, but a full frame does not
+  (640×480 grayscale ≈ 65 BRAMs). Anything beyond a line or two needs
+  external DDR + DMA — that's what Layer 3 exercises.
+- **SoC split:** the PL handles the pixel-synchronous data path
+  (MIPI Rx IP → counters → line buffer → AXI-Stream), while the PS
+  (ARM + Linux) handles the slow, irregular work: I2C/SCCB sensor config,
+  DDR buffer management, UART debug, display. AXI moves data between them.
+- **Real-time guarantee:** a CPU can drop frames under load; the FPGA
+  pipeline either keeps up at line rate or fails visibly — which is exactly
+  what the `mipi_verify` layers are built to detect.
+
+---
+
 ## Before You Start — Hardware Checklist
 
 - [ ] Confirm board is AXU2CGB (silkscreen or invoice).
