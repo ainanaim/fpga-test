@@ -1,15 +1,16 @@
 # 08 — FPGA Vision Project Roadmap
 
-> Compressed roadmap for the **ALINX AXU2CGB** (Zynq UltraScale+ ZU2CG) + OV5647 MIPI camera pipeline.
+> Shared roadmap for the **ALINX AXU2CGB** (Zynq UltraScale+ ZU2CG) + OV5647 MIPI camera pipeline.
 > Focus: get camera data into the FPGA, verify it, then build processing on top.
+> This document is status-neutral; contributors track their own progress in separate files in this folder.
 
 ---
 
 ## Phases at a Glance
 
 ```
-Phase 0: Setup + Board Bring-up        (done)
-Phase 1: MIPI Camera Ingestion          (current)
+Phase 0: Setup + Board Bring-up
+Phase 1: MIPI Camera Ingestion
 Phase 2: Verification (RTL + ILA/UART)
 Phase 3: Pixel Processing Core
 Phase 4: Display / Software Integration
@@ -18,14 +19,16 @@ Phase 5: Advanced Pipeline
 
 ---
 
-## Phase 0 — Setup ✅
+## Phase 0 — Setup and Board Bring-up
 
-**Done:**
-- Vivado/Vitis installed (2020.1+)
-- AXU2CGB board confirmed (not -E variant)
-- `create_mipi_bringup.tcl` generates full block design
-- OV5647 chip ID confirmed via I²C (0x5647)
-- Bitstream generated, BOOT.bin created
+**Goal:** Establish a reproducible hardware and software starting point for camera development.
+
+**Key activities:**
+- Install Vivado/Vitis (2020.1 or later).
+- Confirm the exact AXU2CGB board variant and FPGA part.
+- Generate the camera block design from `create_mipi_bringup.tcl`.
+- Confirm OV5647 communication and chip ID over I²C.
+- Generate the bitstream and create a bootable `BOOT.bin`.
 
 **Key files:**
 - `vivado/create_mipi_bringup.tcl` — one-shot project generator. When sourced in Vivado's Tcl Console, it automatically:
@@ -40,25 +43,28 @@ Phase 5: Advanced Pipeline
 - `src/constraints/mipi1.xdc` — J23 pin constraints
 - `wiki/vision/12_OV5647_MIPI_CAMERA_PATH.md` — full camera guide
 
+**Exit criteria:**
+- The design builds reproducibly from the Tcl generator.
+- The FPGA part, pin assignments, and board variant are confirmed.
+- The sensor chip ID can be read over I²C.
+- A bitstream and boot image can be generated.
+
 ---
 
-## Phase 1 — MIPI Camera Ingestion 🔄
+## Phase 1 — MIPI Camera Ingestion
 
 **Goal:** Get OV5647 streaming MIPI data into the FPGA and confirm it reaches the PL.
 
-**Current status:**
-- Block design built (MIPI CSI-2 Rx + FIFO + ILA skeleton)
-- UART logging app created (prints frame/pixel counters)
-- Waiting for: JTAG cable for ILA, or SD boot + PuTTY verification
-
-**Remaining:**
-- [ ] Boot from SD card → check PuTTY for `frames=N` output
-- [ ] Confirm MIPI stream active (frame counter increments)
+**Key activities:**
+- Boot the generated design from SD or load it through JTAG.
+- Start the sensor stream over I²C/SCCB.
+- Use UART logging or ILA to observe frame and pixel activity.
+- Confirm the MIPI stream reaches the AXI4-Stream FIFO.
 
 **Exit criteria:**
-- `xil_printf` shows `frames > 0` every 500ms
-- Sensor responds to stream-on command
-- No I2C errors
+- `xil_printf` shows `frames > 0` every 500 ms, or ILA shows equivalent frame activity.
+- The sensor responds to the stream-on command.
+- No I²C errors are reported.
 
 ---
 
@@ -74,15 +80,15 @@ Phase 5: Advanced Pipeline
 | CSI-2 decode | Frames/lines/pixels decoded correctly | `mipi_stats.v` counters |
 | AXI-Stream | Data flows through FIFO to PS | UART counter output |
 
-**Files ready:**
+**Files for this phase:**
 - `src/rtl/mipi_verify/mipi_stats.v` — frame/pixel/line counters
 - `src/rtl/mipi_verify/line_buffer_passthrough.v` — AXI-Stream buffer
 - `src/rtl/mipi_verify/ila_mipi_wrapper.v` — ILA probe wrapper
 
 **Exit criteria:**
-- Frame counter increments at expected rate (~30 fps)
-- Pixel counter matches resolution × frame rate
-- No CRC errors or packet drops in MIPI Rx status registers
+- Frame counter increments at the expected rate (~30 fps).
+- Pixel counter matches resolution × frame rate.
+- No CRC errors or packet drops appear in MIPI Rx status registers.
 
 ---
 
@@ -93,7 +99,7 @@ Phase 5: Advanced Pipeline
 **Recommended first modules:**
 1. **Grayscale converter** — RGB→Y (simple, good for learning pipeline timing)
 2. **3×3 sliding window** — foundation for convolution filters
-3. **Line buffer** — already have `line_buffer_passthrough.v` as starting point
+3. **Line buffer** — use `line_buffer_passthrough.v` as a starting point
 
 **Key concepts:**
 - AXI4-Stream handshake (TVALID/TREADY/TLAST/TUSER)
@@ -101,9 +107,9 @@ Phase 5: Advanced Pipeline
 - Fixed-point arithmetic for filters
 
 **Exit criteria:**
-- Processed image visible on display or readable by PS
-- Throughput ≥ 1 pixel/clock at 100 MHz
-- Timing closure (WNS ≥ 0)
+- Processed image is visible on a display or readable by the PS.
+- Throughput is at least 1 pixel/clock at 100 MHz.
+- Timing closure is achieved (WNS ≥ 0).
 
 ---
 
@@ -121,13 +127,16 @@ Phase 5: Advanced Pipeline
 - Or baremetal Vitis → custom register interface
 
 **Exit criteria:**
-- Live video visible on display OR frame data readable from PS
-- Frame rate ≥ 15 fps sustained
+- Live video is visible on a display OR frame data is readable from the PS.
+- A frame rate of at least 15 fps is sustained.
 
 ---
 
-## Phase 5 — Advanced Pipeline (future)
+## Phase 5 — Advanced Pipeline
 
+**Goal:** Extend the verified stream with more advanced processing and acceleration.
+
+**Candidate work:**
 - Multi-stage processing (denoise → edge detect → morphology)
 - Object detection (HLS-accelerated or DPU)
 - Custom AXI-Stream processing modules
@@ -158,5 +167,8 @@ Phase 5: Advanced Pipeline
 
 ---
 
-*Last updated: 2026-11-17*
-*Status: Phase 1 in progress — waiting for hardware verification*
+## Personal Progress Logs
+
+- [Aina's progress](./AINA_PROGRESS.md)
+
+*Last updated: 2026-11-18*

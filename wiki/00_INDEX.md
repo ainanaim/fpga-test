@@ -24,7 +24,7 @@ Files are organized into five subfolders by topic. The index stays at the wiki r
 | 05 | `fundamentals/` | [Memory and Interfaces](./fundamentals/05_MEMORY_AND_INTERFACES.md) | BRAM, registers, external DRAM, AXI4 bus, DMA, streaming (AXI4-Stream) |
 | 06 | `vision/` | [Vision on FPGAs](./vision/06_VISION_ON_FPGA.md) | Image pipelines, pixel formats, video standards, key algorithms and their FPGA mapping |
 | 07 | `hardware/` | [Hardware Selection Guide](./hardware/07_HARDWARE_SELECTION.md) | Choosing an FPGA board — Zynq SoC, development boards comparison |
-| 08 | `progress/` | [Project Roadmap (Progress)](./progress/08_ROADMAP(PROGRESS).md) | Phased learning plan from zero to a working vision accelerator |
+| 08 | `progress/` | [Project Roadmap](./progress/08_ROADMAP(PROGRESS).md) | Shared, status-neutral phased plan from setup to a working vision accelerator |
 | 09 | `hardware/` | [Timing Constraints (XDC) Deep Dive](./hardware/09_TIMING_CONSTRAINTS.md) | STA, create_clock, CDC constraints, multi-cycle paths, reading timing reports, closure workflow |
 | 10 | `hardware/` | [Zynq UltraScale+ Reference Summary](./hardware/10_ZYNQ_ULTRASCALE_REFERENCE.md) | Condensed summary of DS891 + UG1085: device subfamilies, PS/PL resources, AXI interfaces, clocking, DDR, boot sequence |
 | 11 | `vision/` | [Video Processing Fundamentals (Step-by-Step)](./vision/11_VIDEO_PROCESSING_FUNDAMENTALS.md) | How pixels stream through an FPGA clock-by-clock — shift registers, line buffers, sliding windows, pipeline latency/throughput, DDR when needed |
@@ -41,7 +41,7 @@ wiki/
 ├── fundamentals/            ← 01-05: FPGA, digital design, HDL, toolchain, memory
 ├── vision/                  ← 06, 11, 12, 15: vision pipelines, video processing, MIPI camera, learning path
 ├── hardware/                ← 07, 09, 10: board selection, timing constraints, Zynq reference
-├── progress/                ← 08: project roadmap and progress
+├── progress/                ← 08: shared roadmap plus personal progress logs
 └── tutorials/               ← 13, 14: translated ALINX Vitis + FPGA courses
 ```
 
@@ -55,7 +55,7 @@ Follow [`15_LEARNING_PATH.md`](./vision/15_LEARNING_PATH.md) — it tells you
 which Course 1 chapters to actually build, what to skip, and how to run the
 `mipi_verify` modules to prove the OV5647 camera data path.
 
-Current progress is tracked in
+The shared implementation plan is in
 [`progress/08_ROADMAP(PROGRESS).md`](./progress/08_ROADMAP(PROGRESS).md).
 
 ### For general FPGA learning (from zero)
