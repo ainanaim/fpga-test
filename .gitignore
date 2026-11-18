@@ -17,6 +17,7 @@
 *.os
 *.xml.bak
 XilinxIP/
+vivado/mipi_bringup/
 *.cache/
 *.hw/
 *.ip_user_files/
