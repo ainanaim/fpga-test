@@ -107,23 +107,15 @@ connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0] [get_bd_pins clk_wiz_0
 
 # ---------------------------------------------------------------------------
 # 3d.  MIPI CSI-2 Receiver Subsystem  (PG232)
-#       2 lanes, RAW8, 4 pixels/clock (32-bit AXIS), D-PHY 400 Mbps, Shared Logic in Core
+#       2 lanes, RAW8, 4 pixels/clock, D-PHY 400 Mbps, Shared Logic in Core
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv [find_ip mipi_csi2_rx_subsystem] mipi_csi2_rx_subsystem_0
 set_property -dict [list \
     CONFIG.CMN_NUM_LANES            {2}      \
     CONFIG.CMN_PXL_FORMAT           {RAW8}   \
     CONFIG.CMN_NUM_PIXELS           {4}      \
-    CONFIG.CMN_NUM_PIXELS           {4}      \
     CONFIG.DPY_LINE_RATE            {400}    \
     CONFIG.SupportLevel             {1}      \
-    CONFIG.SupportLevel             {1}      \
-    CONFIG.CLK_LANE_IO_LOC          {AC9}    \
-    CONFIG.CLK_LANE_IO_LOC_NAME     {IO_L1P_T0L_N0_DBC_64}   \
-    CONFIG.DATA_LANE0_IO_LOC        {AE9}    \
-    CONFIG.DATA_LANE0_IO_LOC_NAME   {IO_L2P_T0L_N2_64}       \
-    CONFIG.DATA_LANE1_IO_LOC        {AB8}    \
-    CONFIG.DATA_LANE1_IO_LOC_NAME   {IO_L3P_T0L_N4_AD15P_64} \
 ] [get_bd_cells mipi_csi2_rx_subsystem_0]
 
 create_bd_intf_port -mode Slave \
@@ -203,26 +195,6 @@ set_property -dict [list CONFIG.CONST_WIDTH {1} CONFIG.CONST_VAL {1}] \
     [get_bd_cells xlconstant_tready]
 connect_bd_net [get_bd_pins xlconstant_tready/dout] \
     [get_bd_pins axis_data_fifo_0/m_axis_tready]
-
-# ---------------------------------------------------------------------------
-# 3h.  ILA  (Integrated Logic Analyzer — 5 probes, 4096 depth)
-# ---------------------------------------------------------------------------
-create_bd_cell -type ip -vlnv [find_ip ila] ila_0
-set_property -dict [list \
-    CONFIG.C_MONITOR_TYPE   {Native} \
-    CONFIG.C_NUM_OF_PROBES  {5}     \
-    CONFIG.C_PROBE0_WIDTH   {32}    \
-    CONFIG.C_PROBE1_WIDTH   {1}     \
-    CONFIG.C_PROBE2_WIDTH   {1}     \
-    CONFIG.C_PROBE3_WIDTH   {1}     \
-    CONFIG.C_PROBE4_WIDTH   {1}     \
-    CONFIG.C_DATA_DEPTH     {4096}  \
-    CONFIG.C_ADV_TRIGGER    {true}  \
-    CONFIG.C_EN_STRG_QUAL   {1}     \
-] [get_bd_cells ila_0]
-
-connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_clk0] \
-    [get_bd_pins ila_0/clk]
 
 # ---------------------------------------------------------------------------
 # 3i.  CAM1 CLK output  (J23 pin 12 -> AG13, LVCMOS33)
