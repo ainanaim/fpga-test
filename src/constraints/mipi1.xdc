@@ -99,10 +99,3 @@ set_property IOSTANDARD LVCMOS33 [get_ports cam1_i2c_sda_io]
 set_property PULLTYPE PULLUP [get_ports {cam1_gpio[0]}]
 set_property PULLTYPE PULLUP [get_ports cam1_i2c_scl_io]
 set_property PULLTYPE PULLUP [get_ports cam1_i2c_sda_io]
-
-# cam1_clk is a clock output driven by the Clocking Wizard — mark it as a
-# generated clock so the timing engine tracks it correctly.
-# Replace clk_wiz_inst/clk_out_24m with the actual Clocking Wizard output net
-# name from your block design.
-# create_generated_clock -name cam1_xclk -source [get_pins clk_wiz_inst/clk_out_24m] #     -divide_by 1 [get_ports cam1_clk]
-

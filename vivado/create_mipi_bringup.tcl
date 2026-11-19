@@ -4,17 +4,18 @@
 #  Creates the MIPI1/J23 OV5647 bring-up project for ALINX AXU2CGB-E.
 #  Target part : xczu2cg-sfvc784-1-e
 #  I2C control : Zynq PS I2C0 via EMIO (use xiicps.h in Vitis)
+#  ILA         : Removed
 # =============================================================================
 
 set script_dir [file dirname [file normalize [info script]]]
 set repo_root  [file dirname $script_dir]
 
-# Use a short root path to avoid Windows 260-char OOC synthesis errors ([Common 17-1257])
+# Short path to avoid Windows 260-char OOC synthesis errors ([Common 17-1257])
 set proj_dir   "C:/fpga/mipi_bringup"
 set part       xczu2cg-sfvc784-1-e
 
 # ---------------------------------------------------------------------------
-# Helper: find latest version of an IP in the catalog
+# Helper: find IP definition in catalog
 # ---------------------------------------------------------------------------
 proc find_ip {name} {
     set hits [get_ipdefs -filter "NAME == $name" -all]
@@ -32,26 +33,29 @@ create_project mipi_bringup $proj_dir -part $part -force
 set_property default_lib xil_defaultlib [current_project]
 
 # ===========================================================================
-# 2.  Constraints  (mipi1.xdc — J23 confirmed pins: AH13/AE13/AG13/AH14)
+# 2.  Constraints  (mipi1.xdc — J23 MIPI1 pins)
 # ===========================================================================
 set xdc_path [file normalize [file join $repo_root src constraints mipi1.xdc]]
-add_files -fileset constrs_1 -norecurse $xdc_path
-set_property USED_IN_SYNTHESIS      true [get_files [file tail $xdc_path]]
-set_property USED_IN_IMPLEMENTATION true [get_files [file tail $xdc_path]]
-puts "INFO: Added $xdc_path"
+if {[file exists $xdc_path]} {
+    add_files -fileset constrs_1 -norecurse $xdc_path
+    set_property USED_IN_SYNTHESIS      true [get_files [file tail $xdc_path]]
+    set_property USED_IN_IMPLEMENTATION true [get_files [file tail $xdc_path]]
+    puts "INFO: Added $xdc_path"
+} else {
+    puts "WARNING: Constraints file not found at $xdc_path — add mipi1.xdc manually if needed."
+}
 
 # ===========================================================================
-# 3.  Block design
+# 3.  Block Design
 # ===========================================================================
 create_bd_design "mipi_bd"
 
 # ---------------------------------------------------------------------------
 # 3a.  Zynq UltraScale+ MPSoC
-#       PL0   = 100 MHz      (drives all 100 MHz PL logic & clk_wiz_0)
-#       UART0 = Disabled
-#       UART1 = MIO 24..25   (PuTTY serial console)
-#       I2C0  = EMIO         (routed to cam1_i2c_scl_io AH13 / cam1_i2c_sda_io AE13)
-#       M_AXI_HPM0_FPD       (PS -> PL AXI master for MIPI CSI-2 Rx registers)
+#       PL0   = 100 MHz
+#       UART1 = MIO 24..25 (CP2102 USB-UART)
+#       I2C0  = EMIO       (cam1_i2c -> AH13 SCL / AE13 SDA)
+#       SD1   = MIO 46..51, CD = MIO 45
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv [find_ip zynq_ultra_ps_e] zynq_ultra_ps_e_0
 set_property -dict [list \
@@ -62,17 +66,13 @@ set_property -dict [list \
     CONFIG.PSU__UART1__PERIPHERAL__ENABLE         {1}            \
     CONFIG.PSU__UART1__PERIPHERAL__IO             {MIO 24 .. 25} \
     CONFIG.PSU__I2C0__PERIPHERAL__ENABLE          {1}            \
-    CONFIG.PSU__SD1__PERIPHERAL__IO               {MIO 46 .. 51} \
-    CONFIG.PSU__SD1__GRP_CD__ENABLE               {1}            \
-    CONFIG.PSU__SD1__GRP_CD__IO                   {MIO 45}       \
+    CONFIG.PSU__I2C0__PERIPHERAL__IO              {EMIO}         \
 ] [get_bd_cells zynq_ultra_ps_e_0]
 
 # ---------------------------------------------------------------------------
 # 3b.  Processor System Reset
-#       Synchronised to pl_clk0 (100 MHz); held in reset until clk_wiz locks.
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv [find_ip proc_sys_reset] proc_sys_reset_0
-
 connect_bd_net \
     [get_bd_pins zynq_ultra_ps_e_0/pl_clk0] \
     [get_bd_pins proc_sys_reset_0/slowest_sync_clk]
@@ -81,9 +81,7 @@ connect_bd_net \
     [get_bd_pins proc_sys_reset_0/ext_reset_in]
 
 # ---------------------------------------------------------------------------
-# 3c.  Clocking Wizard  (100 MHz PS pl_clk0 -> 200 MHz D-PHY ref + 24 MHz clk_out2)
-#       clk_out1 = 200 MHz  -> MIPI CSI-2 Rx dphy_clk_200M
-#       clk_out2 =  24 MHz  -> cam1_clk (J23 pin 12, AG13)
+# 3c.  Clocking Wizard  (100 MHz pl_clk0 -> 200 MHz clk_out1, 24 MHz clk_out2)
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv [find_ip clk_wiz] clk_wiz_0
 set_property -dict [list \
@@ -103,8 +101,7 @@ connect_bd_net [get_bd_pins clk_wiz_0/locked]             [get_bd_pins proc_sys_
 connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0] [get_bd_pins clk_wiz_0/resetn]
 
 # ---------------------------------------------------------------------------
-# 3d.  MIPI CSI-2 Receiver Subsystem  (PG232)
-#       2 lanes, RAW8, 4 pixels/clock, D-PHY 400 Mbps, Shared Logic in Core
+# 3d.  MIPI CSI-2 Receiver Subsystem (2-lane, RAW8, 4 px/clk, 400 Mbps)
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv [find_ip mipi_csi2_rx_subsystem] mipi_csi2_rx_subsystem_0
 set_property -dict [list \
@@ -133,7 +130,7 @@ connect_bd_net [get_bd_pins proc_sys_reset_0/peripheral_aresetn] \
     [get_bd_pins mipi_csi2_rx_subsystem_0/video_aresetn]
 
 # ---------------------------------------------------------------------------
-# 3e.  AXI Interconnect  (1 Master: PS -> MIPI CSI-2 Rx csirxss_s_axi)
+# 3e.  AXI Interconnect (PS -> MIPI CSI-2 Rx csirxss_s_axi)
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv [find_ip axi_interconnect] axi_interconnect_0
 set_property CONFIG.NUM_MI {1} [get_bd_cells axi_interconnect_0]
@@ -160,7 +157,6 @@ connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_clk0] \
 
 # ---------------------------------------------------------------------------
 # 3f.  PS I2C0 (EMIO) -> External cam1_i2c Interface
-#       Generates top-level IOBUFs: cam1_i2c_scl_io (AH13), cam1_i2c_sda_io (AE13)
 # ---------------------------------------------------------------------------
 create_bd_intf_port -mode Master -vlnv xilinx.com:interface:iic_rtl:1.0 cam1_i2c
 connect_bd_intf_net \
@@ -168,7 +164,7 @@ connect_bd_intf_net \
     [get_bd_intf_ports cam1_i2c]
 
 # ---------------------------------------------------------------------------
-# 3g.  AXI4-Stream Data FIFO  (buffers MIPI Rx video_out for ILA capture)
+# 3g.  AXI4-Stream Data FIFO
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv [find_ip axis_data_fifo] axis_data_fifo_0
 set_property -dict [list \
@@ -194,13 +190,13 @@ connect_bd_net [get_bd_pins xlconstant_tready/dout] \
     [get_bd_pins axis_data_fifo_0/m_axis_tready]
 
 # ---------------------------------------------------------------------------
-# 3i.  CAM1 CLK output  (J23 pin 12 -> AG13, LVCMOS33)
+# 3h.  CAM1 CLK output (24 MHz -> AG13)
 # ---------------------------------------------------------------------------
 create_bd_port -dir O cam1_clk
 connect_bd_net [get_bd_pins clk_wiz_0/clk_out2] [get_bd_ports cam1_clk]
 
 # ---------------------------------------------------------------------------
-# 3j.  CAM1 GPIO [0:0]  (J23 pin 11 -> AH14, LVCMOS33 — Power Enable HIGH)
+# 3i.  CAM1 GPIO [0:0] (HIGH -> AH14)
 # ---------------------------------------------------------------------------
 create_bd_port -dir O -from 0 -to 0 cam1_gpio
 create_bd_cell -type ip -vlnv [find_ip xlconstant] xlconstant_gpio
@@ -209,17 +205,19 @@ set_property -dict [list CONFIG.CONST_WIDTH {1} CONFIG.CONST_VAL {1}] \
 connect_bd_net [get_bd_pins xlconstant_gpio/dout] [get_bd_ports cam1_gpio]
 
 # ---------------------------------------------------------------------------
-# 3k.  AXI Address Map
+# 3j.  AXI Address Map
 # ---------------------------------------------------------------------------
 assign_bd_address -offset 0xA0000000 -range 0x00010000 \
     -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] \
     [get_bd_addr_segs mipi_csi2_rx_subsystem_0/csirxss_s_axi/Reg] -force
 
 # ===========================================================================
-# 4.  Regenerate layout, generate wrapper, set top
+# 4.  Validate, generate products, create wrapper, set top
 # ===========================================================================
-save_bd_design
+validate_bd_design
 regenerate_bd_layout
+save_bd_design
+generate_target all [get_files mipi_bd.bd]
 
 set wrapper [make_wrapper -files [get_files mipi_bd.bd] -top]
 add_files -norecurse $wrapper
@@ -229,5 +227,5 @@ save_bd_design
 
 puts "============================================================"
 puts " Project created cleanly at: $proj_dir/mipi_bringup.xpr"
-puts " PS I2C0 (EMIO) -> cam1_i2c (AH13/AE13), CAM1_GPIO -> AH14"
+puts " PS I2C0 (EMIO) -> cam1_i2c, CAM1_CLK -> clk_out2, no ILA"
 puts "============================================================"
