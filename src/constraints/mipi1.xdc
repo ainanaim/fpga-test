@@ -33,13 +33,9 @@
 ################################################################################
 
 ################################################################################
-#  PL Reference Clock (25 MHz, BANK44)
-#  Used by the Clocking Wizard to generate all derived clocks.
+#  PS Fabric Clock (100 MHz)
+#  PS pl_clk0 drives the Clocking Wizard; no external clock port is used.
 ################################################################################
-set_property PACKAGE_PIN AB11 [get_ports pl_ref_clk]
-set_property IOSTANDARD  LVCMOS33 [get_ports pl_ref_clk]
-create_clock -period 40.000 -name pl_ref_clk -waveform {0.000 20.000} \
-    [get_ports pl_ref_clk]
 
 ################################################################################
 #  MIPI1 D-PHY Differential Pairs — BANK64 (HP, 1.2 V)
@@ -90,25 +86,23 @@ set_property PACKAGE_PIN AC8 [get_ports {mipi_phy_if_data_n[1]}]
 #  OV5647 requires XCLK before it will respond on SCCB.
 ################################################################################
 
-set_property PACKAGE_PIN AH14 [get_ports cam1_gpio]
-set_property PACKAGE_PIN AG13 [get_ports cam1_clk]
+set_property PACKAGE_PIN AH14 [get_ports {cam1_gpio[0]}]
 set_property PACKAGE_PIN AH13 [get_ports cam1_i2c_scl_io]
 set_property PACKAGE_PIN AE13 [get_ports cam1_i2c_sda_io]
-set_property IOSTANDARD LVCMOS33 [get_ports cam1_gpio]
-set_property IOSTANDARD LVCMOS33 [get_ports cam1_clk]
+set_property IOSTANDARD LVCMOS33 [get_ports {cam1_gpio[0]}]
 set_property IOSTANDARD LVCMOS33 [get_ports cam1_i2c_scl_io]
 set_property IOSTANDARD LVCMOS33 [get_ports cam1_i2c_sda_io]
 
 # Pull-ups confirmed in official ALINX mipi.xdc — required for open-drain
 # SCCB/I2C lines. Pi V1 camera module has on-board 1.5 kΩ pull-ups but
 # enabling the FPGA's weak pull-up adds no harm and helps if they are absent.
-set_property PULLUP true [get_ports cam1_gpio]
-set_property PULLUP true [get_ports cam1_i2c_scl_io]
-set_property PULLUP true [get_ports cam1_i2c_sda_io]
+set_property PULLTYPE PULLUP [get_ports {cam1_gpio[0]}]
+set_property PULLTYPE PULLUP [get_ports cam1_i2c_scl_io]
+set_property PULLTYPE PULLUP [get_ports cam1_i2c_sda_io]
 
 # cam1_clk is a clock output driven by the Clocking Wizard — mark it as a
 # generated clock so the timing engine tracks it correctly.
 # Replace clk_wiz_inst/clk_out_24m with the actual Clocking Wizard output net
 # name from your block design.
-# create_generated_clock -name cam1_xclk -source [get_pins clk_wiz_inst/clk_out_24m] \
-#     -divide_by 1 [get_ports cam1_clk]
+# create_generated_clock -name cam1_xclk -source [get_pins clk_wiz_inst/clk_out_24m] #     -divide_by 1 [get_ports cam1_clk]
+

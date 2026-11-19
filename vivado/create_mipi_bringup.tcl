@@ -114,7 +114,9 @@ set_property -dict [list \
     CONFIG.CMN_NUM_LANES            {2}      \
     CONFIG.CMN_PXL_FORMAT           {RAW8}   \
     CONFIG.CMN_NUM_PIXELS           {4}      \
+    CONFIG.CMN_NUM_PIXELS           {4}      \
     CONFIG.DPY_LINE_RATE            {400}    \
+    CONFIG.SupportLevel             {1}      \
     CONFIG.SupportLevel             {1}      \
     CONFIG.CLK_LANE_IO_LOC          {AC9}    \
     CONFIG.CLK_LANE_IO_LOC_NAME     {IO_L1P_T0L_N0_DBC_64}   \
