@@ -101,12 +101,12 @@ connect_bd_net [get_bd_pins clk_wiz_0/locked]             [get_bd_pins proc_sys_
 connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0] [get_bd_pins clk_wiz_0/resetn]
 
 # ---------------------------------------------------------------------------
-# 3d.  MIPI CSI-2 Receiver Subsystem (2-lane, RAW8, 4 px/clk, 400 Mbps)
+# 3d.  MIPI CSI-2 Receiver Subsystem (2-lane, RAW10, 4 px/clk, 400 Mbps)
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv [find_ip mipi_csi2_rx_subsystem] mipi_csi2_rx_subsystem_0
 set_property -dict [list \
     CONFIG.CMN_NUM_LANES            {2}      \
-    CONFIG.CMN_PXL_FORMAT           {RAW8}   \
+    CONFIG.CMN_PXL_FORMAT           {RAW10}   \
     CONFIG.CMN_NUM_PIXELS           {4}      \
     CONFIG.DPY_LINE_RATE            {400}    \
     CONFIG.SupportLevel             {1}      \
@@ -164,11 +164,11 @@ connect_bd_intf_net \
     [get_bd_intf_ports cam1_i2c]
 
 # ---------------------------------------------------------------------------
-# 3g.  AXI4-Stream Data FIFO
+# 3g.  AXI4-Stream Data FIFO (5 bytes per pixel for RAW10)
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv [find_ip axis_data_fifo] axis_data_fifo_0
 set_property -dict [list \
-    CONFIG.TDATA_NUM_BYTES  {4}    \
+    CONFIG.TDATA_NUM_BYTES  {5}    \
     CONFIG.FIFO_DEPTH       {4096} \
     CONFIG.TUSER_WIDTH      {1}    \
     CONFIG.HAS_TLAST        {1}    \

@@ -11,7 +11,7 @@
 ```
 Phase 0: Setup + Board Bring-up
 Phase 1: MIPI Camera Ingestion
-Phase 2: Verification (RTL + ILA/UART)
+Phase 2: Verification (RTL + UART; ILA optional — needs JTAG cable)
 Phase 3: Pixel Processing Core
 Phase 4: Display / Software Integration
 Phase 5: Advanced Pipeline
@@ -58,11 +58,11 @@ Phase 5: Advanced Pipeline
 **Key activities:**
 - Boot the generated design from SD or load it through JTAG.
 - Start the sensor stream over I²C/SCCB.
-- Use UART logging or ILA to observe frame and pixel activity.
+- Use UART logging to observe frame and pixel activity (ILA is optional and needs a JTAG cable, not yet available).
 - Confirm the MIPI stream reaches the AXI4-Stream FIFO.
 
 **Exit criteria:**
-- `xil_printf` shows `frames > 0` every 500 ms, or ILA shows equivalent frame activity.
+- `xil_printf` shows `frames > 0` every 500 ms (ILA can show equivalent frame activity once a JTAG cable is available).
 - The sensor responds to the stream-on command.
 - No I²C errors are reported.
 
@@ -75,15 +75,15 @@ Phase 5: Advanced Pipeline
 | Layer | What to verify | Tool |
 |-------|---------------|------|
 | I2C/SCCB | Sensor responds, chip ID correct | `i2cdetect`, `i2ctransfer` |
-| XCLK | Sensor has clock (required for I2C) | Scope or ILA |
-| MIPI D-PHY | Physical layer signals present | ILA on `mipi_phy_if_*` |
+| XCLK | Sensor has clock (required for I2C) | Scope (ILA optional — needs JTAG) |
+| MIPI D-PHY | Physical layer signals present | ILA on `mipi_phy_if_*` (optional — needs JTAG) or MIPI Rx status registers |
 | CSI-2 decode | Frames/lines/pixels decoded correctly | `mipi_stats.v` counters |
 | AXI-Stream | Data flows through FIFO to PS | UART counter output |
 
 **Files for this phase:**
 - `src/rtl/mipi_verify/mipi_stats.v` — frame/pixel/line counters
 - `src/rtl/mipi_verify/line_buffer_passthrough.v` — AXI-Stream buffer
-- `src/rtl/mipi_verify/ila_mipi_wrapper.v` — ILA probe wrapper
+- `src/rtl/mipi_verify/ila_mipi_wrapper.v` — ILA probe wrapper (optional, needs JTAG cable)
 
 **Exit criteria:**
 - Frame counter increments at the expected rate (~30 fps).

@@ -57,9 +57,9 @@ camera work specifically.
 
 ## Phase 0 — Vivado Flow Basics (Course 1 Ch.4, ~half a day)
 
-**Goal:** learn the full PL flow on a trivial example. Build the LED blink,
-add ILA, trigger on a counter value. This is the foundation everything else
-reuses.
+**Goal:** learn the full PL flow on a trivial example. Build the LED blink;
+optionally add ILA (needs a JTAG cable, not yet available), trigger on a
+counter value. This is the foundation everything else reuses.
 
 - [ ] Read [`14_ALINX_FPGA_COURSE1.md`](../tutorials/14_ALINX_FPGA_COURSE1.md) §4
       (PL Hello World LED).
@@ -72,10 +72,10 @@ reuses.
 - [ ] Generate Bitstream.
 - [ ] Download via JTAG (Hardware Manager → Auto Connect → Program Device).
       Confirm the 4 PL LEDs blink once per second. (not needed yet)
-- [ ] **Add ILA (§4.9 Method A):** insert ILA IP, 2 probes
+- [ ] **[Optional — needs JTAG cable] Add ILA (§4.9 Method A):** insert ILA IP, 2 probes
       (PROBE0 = 32 bits for `timer_cnt`, PROBE1 = 4 bits for `led`).
       Rebuild, download, trigger on `timer_cnt == 24999999`. (not needed yet)
-- [ ] **Add ILA (§4.9 Method B):** comment out the ILA instantiation, add
+- [ ] **[Optional — needs JTAG cable] Add ILA (§4.9 Method B):** comment out the ILA instantiation, add
       `(* MARK_DEBUG = "true" *)` to `led` and `timer_cnt`, run Set Up Debug
       wizard, rebuild, download, trigger the same way. (not needed yet)
 
@@ -152,7 +152,7 @@ This is where your actual goal lives. Phases 0-1 were just the prerequisite.
 Now you're doing what [`src/rtl/mipi_verify/README.md`](../../src/rtl/mipi_verify/README.md)
 describes. Each layer isolates a failure domain.
 
-### Layer 0 — ILA only (no logic, ~30 min)
+### Layer 0 — ILA only (optional, needs JTAG cable, ~30 min)
 - [ ] Instantiate `ila_mipi_wrapper.v` on the MIPI Rx IP's AXI-Stream output.
 - [ ] Generate the ILA IP in Vivado: 5 probes, widths = (DATA_W, 1, 1,
       USER_W, 1), depth = 1024.
@@ -164,7 +164,7 @@ describes. Each layer isolates a failure domain.
 
 ### Layer 1 — Pixel/Line/Frame counter (~1 hour)
 - [ ] Replace the wrapper with `mipi_stats.v`.
-- [ ] Attach ILA to `pixel_cnt`, `line_cnt`, `frame_cnt`, `sof_seen`.
+- [ ] [Optional — needs JTAG cable] Attach ILA to `pixel_cnt`, `line_cnt`, `frame_cnt`, `sof_seen`.
 - [ ] Confirm `frame_cnt` ticks at the frame rate (~30/s for 30 fps).
 - [ ] Confirm `line_cnt` resets to 0 at each SOF and reaches the row count
       (1080 for 1080p) just before the next SOF.
@@ -174,7 +174,7 @@ describes. Each layer isolates a failure domain.
 ### Layer 2 — Line buffer passthrough (~2 hours)
 - [ ] Insert `line_buffer_passthrough.v` between the MIPI Rx IP and a
       downstream sink.
-- [ ] Put ILA on **both** the input (`s_axis_*`) and output (`m_axis_*`) sides.
+- [ ] [Optional — needs JTAG cable] Put ILA on **both** the input (`s_axis_*`) and output (`m_axis_*`) sides.
 - [ ] Compare: same pixel values, same row length, same frame rate?
 - [ ] If yes → the PL has proven it can receive, store, and re-emit MIPI
       video. The data path works.

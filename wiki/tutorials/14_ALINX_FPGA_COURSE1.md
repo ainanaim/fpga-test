@@ -490,6 +490,8 @@ This way you don't modify `led.v` — the testbench sets a small `MAX` for simul
 > A PL-only project **cannot** be flashed to QSPI directly — the PS must be involved (see Course 2, Ch.1 FAQ).
 
 ### 4.9 Online debug with ILA (integrated logic analyzer)
+> **Optional — requires a JTAG cable (not yet available).** Skip until one is available.
+
 Two methods:
 
 **Method A — Add ILA IP:**
@@ -566,7 +568,7 @@ common type — independent read/write ports).
 
 ### Test design
 Write 512 sequential values (1..512) once into Port A; continuously read Port B with a free-running address.
-Instantiate `ila` on Port B's `r_data`/`r_addr` to observe. Key logic:
+Instantiate `ila` (optional — needs JTAG cable) on Port B's `r_data`/`r_addr` to observe. Key logic:
 ```verilog
 // Write enable: assert until 512 writes done, then stop
 always @(posedge clk or negedge rst_n) begin
@@ -585,7 +587,7 @@ always @(posedge clk or negedge rst_n) begin
   else if (|w_addr) r_addr <= r_addr + 1;   // start reading once writing has begun
 end
 ```
-**Result (ILA)**: `r_addr` sweeps 0→1ff; `r_data` follows, lagging the address by 2 clocks (matches sim).
+**Result (ILA, optional — needs JTAG)**: `r_addr` sweeps 0→1ff; `r_data` follows, lagging the address by 2 clocks (matches sim).
 
 ---
 
@@ -608,7 +610,7 @@ memory_initialization_vector=
 Primitives Output Register. **Other Options → Load Init File → Browse** → select `rom_init.coe`. Generate.
 
 ### 7.3 Test design
-Free-running 5-bit address; ROM outputs the preloaded data; `ila` observes `rom_addr`/`rom_data`. Data lags
+Free-running 5-bit address; ROM outputs the preloaded data; `ila` (optional — needs JTAG) observes `rom_addr`/`rom_data`. Data lags
 address by one cycle (same as RAM read).
 
 ---
@@ -633,7 +635,7 @@ and Read Data Count. Generate.
   60 cycles before entering the W_FIFO / R_FIFO states.
 - Write FSM: `W_IDLE` (wait 80 cycles) → `W_FIFO` (write while `~full`).
 - Read FSM: `R_IDLE` (wait 60 cycles) → `R_FIFO` (read while `~empty`).
-- Two ILAs: one on the write channel (`w_data`, `wr_en`, `full`, `wr_data_count`), one on the read channel
+- Two ILAs (optional — need JTAG cable): one on the write channel (`w_data`, `wr_en`, `full`, `wr_data_count`), one on the read channel
   (`r_data`, `rd_en`, `empty`, `rd_data_count`).
 
 ### 8.4 Result
@@ -855,7 +857,7 @@ New Project (RTL, Verilog, xczu2cg-sfvc784-1-e)
   → Run Simulation (behavioral) to verify
   → Generate Bitstream
   → Hardware Manager → Auto Connect → Program Device (JTAG mode)
-  → (optional) ILA online debug: add ILA IP or MARK_DEBUG
+  → (optional — needs JTAG cable) ILA online debug: add ILA IP or MARK_DEBUG
 ```
 
 Every experiment in this course (and most PL work in general) follows this exact loop. Master it on the LED

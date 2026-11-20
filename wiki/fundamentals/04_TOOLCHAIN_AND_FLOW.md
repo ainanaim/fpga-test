@@ -12,7 +12,7 @@
 5. [Implementation: Place and Route](#5-implementation-place-and-route)
 6. [Timing Constraints (XDC)](#6-timing-constraints-xdc)
 7. [Bitstream Generation and Programming](#7-bitstream-generation-and-programming)
-8. [In-Circuit Debugging with ILA](#8-in-circuit-debugging-with-ila)
+8. [In-Circuit Debugging with ILA (optional)](#8-in-circuit-debugging-with-ila)
 9. [Project Structure and Build Automation](#9-project-structure-and-build-automation)
 10. [Compile Time Reality Check](#10-compile-time-reality-check)
 
@@ -95,7 +95,7 @@ The Flow Navigator is the column of buttons on the left side of the Vivado windo
 │  │ 5. Generate Bitstream         │  │  ← Write .bit file
 │  └─────────────────────────────┘  │
 │  ┌─────────────────────────────┐  │
-│  │ 6. Hardware Manager          │  │  ← Program FPGA + ILA debug
+│  │ 6. Hardware Manager          │  │  ← Program FPGA (+ optional ILA debug)
 │  └─────────────────────────────┘  │
 └──────────────────────────────────┘
 ```
@@ -107,7 +107,7 @@ The Flow Navigator is the column of buttons on the left side of the Vivado windo
 | 3 | **Synthesis** → Run Synthesis | Maps your RTL to FPGA primitives (LUTs, FFs, BRAM, DSP48). Runs logic optimization (constant folding, dead-code elimination, retiming). | **Schematic (gate-level)** — real LUTs, FFs, and gates, not abstract modules. Also: Utilization report, Synthesis log, and **Device view** (chip floorplan with I/O pins placed, but internal logic not yet placed). | "What circuit did the synthesizer build from my code?" If you see 32 `FDRE` blocks for `timer_cnt`, your 32-bit counter inferred correctly. If you see a `LATCH` block, you have a combinational `always` that doesn't cover all cases. Check the Utilization report for LUT/FF/BRAM/DSP counts. The Device view at this stage shows the chip layout and I/O pin locations, but your logic isn't placed on the die yet — that happens in Implementation. |
 | 4 | **Implementation** → Run Implementation | Two sub-steps: **Place** (assign each netlist cell to a physical site on the die) then **Route** (program the routing fabric to connect them). Then runs **Static Timing Analysis**. | **Device view** (now filled — your placed logic and routing visible on the floorplan), **Timing Summary** (WNS/TNS/critical paths), **Utilization report** (final). | "Where on the die did the placer put my logic, and will it run at my target clock?" WNS ≥ 0 means timing met. WNS < 0 means it won't — you need to fix RTL, constraints, or implementation strategy. The Device view now shows your LUTs/FFs/BRAMs/DSPs at specific sites and the wires connecting them. Congested areas show as dense wire tangles. |
 | 5 | **Generate Bitstream** | Converts the placed-and-routed design into a `.bit` file (for JTAG) or `.bin` (for flash). | No view — just a file and a "Bitstream Generation Completed" dialog. | The `.bit` is what you download to the FPGA. If this succeeds, your design is physically realizable on this chip. |
-| 6. | **Hardware Manager** → Open Target → Auto Connect → Program Device | Downloads the bitstream to the FPGA via JTAG. Optionally attaches ILA for live signal capture. | **ILA Dashboard** — live waveform captures from the running FPGA. | "Is my design actually working on real hardware?" This is the only view that shows real-world behavior. Trigger on `tvalid`, `tuser`, etc. and watch the actual signals. |
+| 6. | **Hardware Manager** → Open Target → Auto Connect → Program Device | Downloads the bitstream to the FPGA via JTAG. Optionally attaches ILA for live signal capture (requires JTAG cable). | **ILA Dashboard** — live waveform captures from the running FPGA. | "Is my design actually working on real hardware?" This is the only view that shows real-world behavior. Trigger on `tvalid`, `tuser`, etc. and watch the actual signals. |
 
 #### The typical order (and when to skip)
 
@@ -120,7 +120,7 @@ You don't have to run every step every time. Here's the practical order for diff
 | **Check it fits on the chip** | 2 → 3. Synthesis | Implementation, Bitstream |
 | **Check timing meets target** | 2 → 3 → 4. Implementation | Bitstream, Hardware Manager |
 | **Run on real hardware** | 2 → 3 → 4 → 5 → 6. All steps | None |
-| **Debug on hardware** | All steps + add ILA before synthesis | None |
+| **Debug on hardware** | All steps + add ILA before synthesis (ILA optional — needs JTAG cable) | None |
 
 For your LED bring-up without a JTAG cable: just run **step 1 (Simulation)**. That verifies the logic without any hardware. When you get a JTAG cable, run the full flow 2 → 6.
 
@@ -135,7 +135,7 @@ Vivado changes the active view based on which design is open. Look at the dropdo
 | **Device** | FPGA floorplan | Synthesis (I/O pins placed, logic not placed) or Implementation (logic placed + routed) |
 | **I/O Ports** | Pin assignment table | RTL Analysis or Synthesis |
 | **Timing Summary** | STA reports | Implementation (Open Implemented Design) |
-| **ILA Dashboard** | Live hardware waveforms | Hardware Manager |
+| **ILA Dashboard** (optional — needs JTAG cable) | Live hardware waveforms | Hardware Manager |
 | **Waveform** (XSim) | Simulation signals over time | Simulation |
 
 #### The mental model
@@ -165,8 +165,8 @@ Timing Summary      ← "will it run at my target clock speed?"
       ▼  (5. Generate Bitstream)
 .bit file           ← "the thing I download to the FPGA"
       │
-      ▼  (6. Hardware Manager + ILA)
-ILA waveform        ← "is it actually working on real hardware?"
+      ▼  (6. Hardware Manager + optional ILA)
+ILA waveform        ← "is it actually working on real hardware?" (optional — needs JTAG cable)
 ```
 
 Each view answers a different question. If you don't know which question you're asking, you'll be confused about what you're looking at.
@@ -431,7 +431,7 @@ For Zynq boards with on-board QSPI flash (like PYNQ-Z1):
 
 ## 8. In-Circuit Debugging with ILA
 
-Simulation only goes so far. For bugs that only appear in real hardware, use the **Integrated Logic Analyzer (ILA)** — a logic analyzer embedded in your FPGA design.
+Simulation only goes so far. For bugs that only appear in real hardware, use the **Integrated Logic Analyzer (ILA)** — a logic analyzer embedded in your FPGA design. **Optional for this project** — requires a JTAG cable, which is not yet available.
 
 ### How ILA Works
 
