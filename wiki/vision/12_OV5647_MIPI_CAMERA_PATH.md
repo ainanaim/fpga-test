@@ -357,7 +357,7 @@ Source: [`alinxalinx/AXU2CGA_AXU2CGB` → `vivado/auto_create_project/src/constr
 
 **Why the official file has no differential pair pins:** The MIPI CSI-2 Rx Subsystem IP (PG232) auto-generates IOSTANDARD constraints for the D-PHY differential pairs itself. You only provide `PACKAGE_PIN`. Our XDC has them for completeness.
 
-**Port naming:** Our XDC now uses `cam1_i2c_scl_io` / `cam1_i2c_sda_io` to match the ALINX convention. These names come from the AXI IIC IP — when you create a BD interface port named `cam1_i2c`, Vivado generates top-level ports `cam1_i2c_scl_io` and `cam1_i2c_sda_io` with IOBUF primitives for bidirectional I2C. This is cleaner than PS EMIO (which requires manual IOBUF wiring) and matches ALINX's own approach.
+**Port naming:** Our XDC uses `cam1_i2c_scl_io` / `cam1_i2c_sda_io` to match the ALINX convention. These names come from the `cam1_i2c` BD interface port connected to the Zynq PS **I2C0 via EMIO** — Vivado generates the top-level `cam1_i2c_scl_io` / `cam1_i2c_sda_io` ports with IOBUF primitives for bidirectional I2C. This matches ALINX's own approach.
 
 **Why PULLUP matters:** The SCCB/I2C lines are open-drain. Without a pull-up, the lines float high only via the camera module's on-board resistors (1.5 kΩ on Pi V1). The FPGA's internal weak pull-up adds an extra path to VCC and reduces the chance of a floating line if the resistors are marginal. The official ALINX file enables it on GPIO too.
 
@@ -475,15 +475,15 @@ set_property PULLUP true [get_ports cam1_i2c_sda_io]
 
 ### What the IP outputs
 
-The IP's AXI4-Stream output (`m00_axis`) carries:
+The IP's AXI4-Stream output (`video_out` in the Tcl design) carries:
 
 | Signal | Meaning |
 |--------|---------|
-| `m00_axis_tdata` | Pixel data. For RAW8 with 8-bit TDATA: 1 pixel/cycle. For RAW10 with 32-bit TDATA: 4 pixels/cycle (packed). |
-| `m00_axis_tvalid` | 1 = a valid pixel is on the wire this cycle |
-| `m00_axis_tlast` | 1 = last pixel of a row (end of line) |
-| `m00_axis_tuser[0]` | 1 = first pixel of a frame (start of frame, derived from FS short packet) |
-| `m00_axis_tready` | Consumer says "I can accept" — tie to 1 for bring-up, or connect to a FIFO |
+| `video_out_tdata` | Pixel data. For RAW10 with 40-bit TDATA: 4 pixels/cycle (packed). |
+| `video_out_tvalid` | 1 = a valid pixel is on the wire this cycle |
+| `video_out_tlast` | 1 = last pixel of a row (end of line) |
+| `video_out_tuser[0]` | 1 = first pixel of a frame (start of frame, derived from FS short packet) |
+| `video_out_tready` | Consumer says "I can accept" — tie to 1 for bring-up, or connect to a FIFO |
 
 This is the **same AXI4-Stream video convention** used everywhere else in this wiki (see [05 — Memory and Interfaces](../fundamentals/05_MEMORY_AND_INTERFACES.md) §5 and [11 — Video Processing Fundamentals](./11_VIDEO_PROCESSING_FUNDAMENTALS.md) §4). Your downstream pipeline does not know or care that the pixels came via MIPI rather than DVP.
 
@@ -723,6 +723,8 @@ The minimal block design to verify the MIPI data path:
 └─────────────────────────────────────────────────────────────┘
 ```
 
+Not shown: PS I2C0 → EMIO → `cam1_i2c` port (SCCB on BANK24), `cam1_clk` (24 MHz XCLK), `cam1_gpio`, and `proc_sys_reset`.
+
 ### Step-by-step: Vivado block design
 
 #### A. Create the project
@@ -739,7 +741,8 @@ The minimal block design to verify the MIPI data path:
 3. Double-click the Zynq block → **PS-PL Configuration**:
    - **PL Fabric Clocks**: FCLK0 = 100 MHz.
    - **PS-PL Interfaces → Master AXI HPM0 FPD**: enable (for MIPI IP register access from PS).
-4. Click OK. (I2C is handled by the AXI IIC IP added in step F — no PS I2C needed.)
+   - **Peripherals**: UART1 (MIO 24..25), SD1 (MIO 46..51, CD MIO 45), and **I2C0 → EMIO** (the SCCB control path — see step F; no AXI IIC IP is used).
+4. Click OK.
 
 #### C. Add the Clocking Wizard
 
@@ -754,14 +757,14 @@ The minimal block design to verify the MIPI data path:
      | `clk_out1` | 200 MHz | D-PHY reference clock (required by MIPI Rx IP) |
      | `clk_out2` | 24 MHz | XCLK for OV5647 sensor → `cam1_clk` port (pin AG13) |
    - Reset type: Active-Low.
-3. All 100 MHz PL logic (AXI interconnect, FIFO, AXI IIC; ILA optional) uses **`pl_clk0`** directly from the Zynq PS (not a wizard output) — no CDC issues.
+3. All 100 MHz PL logic (AXI interconnect, FIFO, proc_sys_reset) uses **`pl_clk0`** directly from the Zynq PS (not a wizard output) — no CDC issues.
 
 #### D. Add the MIPI CSI-2 Receiver Subsystem IP
 
 1. Add IP → search **MIPI CSI-2 Receiver Subsystem** (PG232). Add it.
 2. Double-click to configure:
    - **Lanes**: 2.
-   - **Pixel Format**: RAW8 (simpler for first bring-up).
+   - **Pixel Format**: RAW10, 4 pixels/clock (the Tcl script's setting; RAW8 is simpler if you prefer fewer TDATA bits).
    - **D-PHY Mode**: LVDS (not GTH).
    - **Line Rate**: 400 Mbps (safe starting point for 1080p30).
    - In the **IO Settings** tab, enter the confirmed J23 pin locations:
@@ -774,27 +777,26 @@ The minimal block design to verify the MIPI data path:
    - `dphy_clk_200M` → `clk_out1` (200 MHz from Clocking Wizard).
    - `lite_aclk` → `pl_clk0` (100 MHz from PS).
    - `video_aclk` → `pl_clk0`.
-   - `s_axi_lite` → AXI Interconnect M00_AXI.
+   - `csirxss_s_axi` → AXI Interconnect M00_AXI.
    - `mipi_phy_if` → external interface port (generates `mipi_phy_if_clk_p/n`, `mipi_phy_if_data_p/n[0/1]`).
 
 #### E. Add the AXI4-Stream FIFO
 
 1. Add IP → **AXI4-Stream Data FIFO**. Add it.
-2. Configure: TDATA = 4 bytes (32-bit), depth = 4096, TUSER width = 1, TLAST enabled.
-3. Connect `S_AXIS` to the MIPI Rx IP's `m00_axis` output.
+2. Configure: TDATA = 5 bytes (40-bit, RAW10 × 4 px/clk), depth = 4096, TUSER width = 1, TLAST enabled.
+3. Connect `S_AXIS` to the MIPI Rx IP's `video_out` output.
 4. Connect `s_axis_aclk` → `pl_clk0`.
 5. Tie `M_AXIS_TREADY` high using **Constant** IP (value 1) — we consume all data for bring-up.
 
-#### F. Add the AXI IIC (and optional ILA)
+#### F. Route PS I2C0 to cam1_i2c (and optional ILA)
 
-**AXI IIC** (replaces PS EMIO I2C — handles bidirectional SDA/SCL automatically):
-1. Add IP → **AXI IIC**. Add it.
-2. Connect `S_AXI` → AXI Interconnect M01_AXI.
-3. Connect `s_axi_aclk` → `pl_clk0`.
-4. Create external **interface port** named `cam1_i2c` (type: IIC). This generates ports `cam1_i2c_scl_io` / `cam1_i2c_sda_io` — these match the XDC constraints at AH13 / AE13.
-5. In Vitis, use `XIic_Send()` from `xiic_l.h` (see Vitis code section below).
+**I2C (PS I2C0 via EMIO — no AXI IIC IP):**
+1. In the Zynq PS block (step B), enable **I2C0** with I/O set to **EMIO**.
+2. Create an external **interface port** named `cam1_i2c` (type: IIC, Master) and connect it to the Zynq's `IIC_0` EMIO pins. This generates ports `cam1_i2c_scl_io` / `cam1_i2c_sda_io` — these match the XDC constraints at AH13 / AE13.
+3. EMIO routes the PS I²C controller through the PL to the package pins, so no AXI IIC IP and no second AXI Interconnect slave are needed. The PS peripheral handles the I²C — the PL just passes the pins through.
+4. In Vitis, use `XIicPs_*` from `xiicps.h` (see Vitis code section below).
 
-**ILA** (optional — requires a JTAG cable and Vivado Hardware Manager; skip for now if you don't have one):
+**ILA** (optional — not in the generated design; requires a JTAG cable and Vivado Hardware Manager to be useful — add it manually only if needed):
 1. Add IP → **ILA**. Configure: 5 probes, probe0=32, probes 1–4=1, depth=4096.
 2. Connect `clk` → `pl_clk0`.
 3. Connect probes to FIFO `M_AXIS` output signals:
@@ -808,7 +810,7 @@ The minimal block design to verify the MIPI data path:
 
 1. Add output port `cam1_clk` → connect to `clk_out2` (24 MHz from Clocking Wizard).
 2. Add output port `cam1_gpio` → tie to Constant 1 (holds OV5647 out of reset).
-3. The I2C ports (`cam1_i2c_scl_io` / `cam1_i2c_sda_io`) are created automatically by the AXI IIC interface port in step F.
+3. The I2C ports (`cam1_i2c_scl_io` / `cam1_i2c_sda_io`) are created by the `cam1_i2c` EMIO interface port in step F.
 
 #### H. Validate and generate
 
@@ -874,22 +876,26 @@ In `src/main.c` of the `ov5647_init` app:
 
 ```c
 #include "xparameters.h"
-#include "xiic_l.h"      // AXI IIC low-level (polled, no interrupt setup needed)
+#include "xiicps.h"     // PS I2C0 driver (I2C0 is routed via EMIO to cam1_i2c)
 #include "xil_printf.h"
 #include "sleep.h"
 
-// XPAR_AXI_IIC_0_BASEADDR is generated by Vitis from the exported .xsa
-#define IIC_BASE    XPAR_AXI_IIC_0_BASEADDR
-#define OV5647_ADDR 0x36   // 7-bit I2C address
+// XPAR_XIICPS_0_DEVICE_ID is generated by Vitis from the exported .xsa
+#define OV5647_ADDR 0x36   // 7-bit SCCB address
+
+static XIicPs IicPs;
 
 // Write one register: reg_addr (16-bit), data (8-bit)
 static void ov5647_write(u16 reg, u8 val) {
     u8 buf[3] = { (reg >> 8) & 0xFF, reg & 0xFF, val };
-    XIic_Send(IIC_BASE, OV5647_ADDR, buf, 3, XIIC_STOP);
+    XIicPs_MasterSendPolled(&IicPs, buf, 3, OV5647_ADDR);
 }
 
 int main(void) {
     xil_printf("OV5647 init start\r\n");
+
+    XIicPs_Config *cfg = XIicPs_LookupConfig(XPAR_XIICPS_0_DEVICE_ID);
+    XIicPs_CfgInitialize(&IicPs, cfg, cfg->BaseAddress);
 
     // Soft reset
     ov5647_write(0x0103, 0x01);
@@ -899,8 +905,8 @@ int main(void) {
     ov5647_write(0x0100, 0x01);
 
     xil_printf("OV5647 streaming\r\n");
-    // At this point the (optional) ILA would trigger on tvalid rising —
-    // without a JTAG cable, confirm streaming via the UART counters below.
+    // Confirm streaming via UART output or the MIPI Rx status
+    // registers (§12) — no JTAG cable needed.
 
     while (1) {}
     return 0;
@@ -953,7 +959,7 @@ The ILA gives you one snapshot — but it needs a JTAG cable, which is not avail
 
 #### Add two AXI GPIO IPs to the block design (for counter readback)
 
-After step F (AXI IIC — ILA optional), add these two IPs to expose `mipi_stats` counters to the PS:
+> **Manual extension — not in `create_mipi_bringup.tcl`.** The generated design has no PL counters; the FIFO output is terminated by the constant TREADY. To stream live frame/pixel counts over UART you must also instantiate `mipi_stats` (or equivalent counters) in the block design and connect its outputs, then add these two IPs to expose them to the PS:
 
 1. Add IP → **AXI GPIO** (first instance):
    - Name it `axi_gpio_frame`.
@@ -976,24 +982,27 @@ Replace the `main.c` from step N with this version — it streams live stats to 
 ```c
 #include "xparameters.h"
 #include "xgpio.h"
-#include "xiic_l.h"      // AXI IIC low-level (polled)
+#include "xiicps.h"     // PS I2C0 driver (I2C0 via EMIO)
 #include "xil_printf.h"
 #include "sleep.h"
 
 // Check xparameters.h after export — IDs may differ
 #define GPIO_FRAME_ID   XPAR_AXI_GPIO_0_DEVICE_ID
 #define GPIO_PIXEL_ID   XPAR_AXI_GPIO_1_DEVICE_ID
-#define IIC_BASE        XPAR_AXI_IIC_0_BASEADDR
 #define OV5647_ADDR     0x36
 
 static XGpio gpio_frame, gpio_pixel;
+static XIicPs IicPs;
 
 static void ov5647_write(u16 reg, u8 val) {
     u8 buf[3] = { (reg >> 8) & 0xFF, reg & 0xFF, val };
-    XIic_Send(IIC_BASE, OV5647_ADDR, buf, 3, XIIC_STOP);
+    XIicPs_MasterSendPolled(&IicPs, buf, 3, OV5647_ADDR);
 }
 
 int main(void) {
+    XIicPs_Config *cfg = XIicPs_LookupConfig(XPAR_XIICPS_0_DEVICE_ID);
+    XIicPs_CfgInitialize(&IicPs, cfg, cfg->BaseAddress);
+
     // Init GPIO readers
     XGpio_Initialize(&gpio_frame, GPIO_FRAME_ID);
     XGpio_Initialize(&gpio_pixel, GPIO_PIXEL_ID);
@@ -1065,7 +1074,7 @@ Only after the ILA shows a clean, complete frame should you add demosaic + HDMI 
 
 ## 11. ILA-Based Data Path Verification
 
-> **Optional — requires a JTAG cable.** Until one is available, verify the data path with the UART `mipi_stats` counters (frames/lines/pixels) and the MIPI Rx IP status registers in §12 instead.
+> **Optional — requires a JTAG cable.** Until one is available, verify the data path via the MIPI Rx IP status registers in §12 (`devmem` reads at `0xA0000000`) and UART output — or the `mipi_stats` counters if you added the optional counter hardware described above.
 
 After programming the PL and running the OV5647 I²C bring-up script from PetaLinux:
 
@@ -1137,8 +1146,8 @@ If your ILA FIFO or downstream consumer is not ready, `tready` goes low and `tva
 The MIPI CSI-2 Rx Subsystem exposes status registers via AXI-Lite. From PetaLinux, you can read these with `devmem` or a small program:
 
 ```bash
-# Read the IP's status register (address depends on your AXI base — e.g. 0x80000000)
-devmem 0x80000040 32    # example: lane status register
+# Read the IP's status register (AXI base 0xA0000000, assigned by create_mipi_bringup.tcl)
+devmem 0xA0000040 32    # example: status register — check PG232 for the exact offset map
 ```
 
 Useful status bits (exact addresses from PG232):

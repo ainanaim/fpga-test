@@ -2,7 +2,9 @@
 
 > Personal progress log for **Aina**. The shared, status-neutral project plan lives in [08 — Project Roadmap](./08_ROADMAP(PROGRESS).md).
 
-*Last updated: 2026-11-18*
+*Last updated: 2026-11-20*
+
+> **Design change (2026-11-20):** `create_mipi_bringup.tcl` no longer includes the AXI IIC IP or the ILA. SCCB/I²C is now driven by the Zynq PS **I2C0 peripheral via EMIO** (`cam1_i2c` → AH13/AE13; Vitis uses `xiicps.h` / `XIicPs_*`, base `XPAR_XIICPS_0_*`). The AXI IIC diagnostics below are kept as history — the bus pins and NACK conclusions still apply, but the controller and driver API have changed, so re-verify I²C with `XIicPs` before continuing.
 
 ---
 

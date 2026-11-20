@@ -38,7 +38,7 @@ Phase 5: Advanced Pipeline
      - Configures the **Zynq UltraScale+ MPSoC** (PS): enables 100 MHz `FCLK0`, AXI `HPM0_FPD`, UART1 (`MIO 24-25`), and SD1 (`MIO 46-51`).
      - Instantiates the **Clocking Wizard**: derives 200 MHz (D-PHY reference) and 24 MHz (XCLK) from the 25 MHz board oscillator.
      - Instantiates the **MIPI CSI-2 Rx Subsystem (PG232)**: configured for 2-lane RAW8 D-PHY with pre-assigned BANK64 pin locations.
-     - Adds **AXI Interconnect**, **AXI IIC** (for camera SCCB/I²C control on BANK24), and **AXI4-Stream FIFO**.
+     - Adds **AXI Interconnect**, **AXI4-Stream FIFO**, and **Processor System Reset**; SCCB/I²C is driven by **PS I2C0 via EMIO** (`cam1_i2c` → BANK24).
   4. **Generates wrapper & sets top**: Generates `mipi_bd_wrapper.v` so the design is ready for synthesis immediately.
 - `src/constraints/mipi1.xdc` — J23 pin constraints
 - `wiki/vision/12_OV5647_MIPI_CAMERA_PATH.md` — full camera guide

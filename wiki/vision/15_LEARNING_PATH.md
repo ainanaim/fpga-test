@@ -136,7 +136,7 @@ This is where your actual goal lives. Phases 0-1 were just the prerequisite.
 - [ ] Read §7 — the Vivado MIPI CSI-2 Receiver Subsystem IP (PG232).
       Configuration: 2 lanes, RAW8 (or RAW10), D-PHY LVDS, target BANK64 (J23).
 - [ ] Read §8-9 — OV5647 register bring-up + SCCB control. The I2C config
-      is done from Vitis (the PS side via AXI IIC or EMIO), not from PL logic. See
+      is done from Vitis (the PS side via I2C0 EMIO, `xiicps.h`), not from PL logic. See
       [`13_VITIS_GETTING_STARTED.md`](../tutorials/13_VITIS_GETTING_STARTED.md) for the
       Vitis flow if you haven't done it yet.
 - [ ] Read §10 — Vivado block design for the MIPI Rx IP. Add the IP, connect

@@ -57,7 +57,7 @@ source vivado/create_mipi_bringup.tcl
 Then **File → Open Project** → `vivado/mipi_bringup/mipi_bringup.xpr`
 
 The script creates the full block design: Zynq PS, Clocking Wizard, MIPI CSI-2 Rx
-Subystem, AXI IIC (SCCB), AXI-Stream FIFO, and loads `mipi1.xdc` automatically.
+Subystem, PS I2C0 via EMIO (SCCB), AXI-Stream FIFO, and loads `mipi1.xdc` automatically.
 
 ### 2. Build bitstream
 
@@ -131,4 +131,4 @@ counters every 500 ms — `STREAMING` with `frames` increasing ~15 per line
   Only `vivado/create_mipi_bringup.tcl` is version-controlled.
 - The official ALINX reference repo: [alinxalinx/AXU2CGA_AXU2CGB](https://github.com/alinxalinx/AXU2CGA_AXU2CGB)
 - PS UART1 is on **MIO 24..25**, SD card on **MIO 46..51** (CD on MIO 45).
-- I2C/SCCB bus is **I2C0 → AXI IIC IP** → `cam1_i2c_scl_io` (AH13) / `cam1_i2c_sda_io` (AE13).
+- I2C/SCCB bus is **PS I2C0 (EMIO)** → `cam1_i2c` → `cam1_i2c_scl_io` (AH13) / `cam1_i2c_sda_io` (AE13).
