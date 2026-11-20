@@ -141,8 +141,6 @@ This is where your actual goal lives. Phases 0-1 were just the prerequisite.
       Vitis flow if you haven't done it yet.
 - [ ] Read §10 — Vivado block design for the MIPI Rx IP. Add the IP, connect
       clocks (Clocking Wizard from 25 MHz ref clock), wire the AXI-Stream output.
-- [ ] [Optional] Read §11 — ILA-based verification. This is exactly what `mipi_verify`
-      implements.
 - [ ] Read §14 — checklist before writing RTL. Go through every box.
 
 ---
@@ -152,7 +150,7 @@ This is where your actual goal lives. Phases 0-1 were just the prerequisite.
 Now you're doing what [`src/rtl/mipi_verify/README.md`](../../src/rtl/mipi_verify/README.md)
 describes. Each layer isolates a failure domain.
 
-### Layer 0 — ILA only (optional, needs JTAG cable, ~30 min)
+### Layer 0 — ILA only (optional, needs JTAG cable)
 - [ ] Instantiate `ila_mipi_wrapper.v` on the MIPI Rx IP's AXI-Stream output.
 - [ ] Generate the ILA IP in Vivado: 5 probes, widths = (DATA_W, 1, 1,
       USER_W, 1), depth = 1024.
