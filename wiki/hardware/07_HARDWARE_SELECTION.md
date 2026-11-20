@@ -226,4 +226,4 @@ Before writing any RTL or buying any peripheral, verify these things in both boa
 ---
 
 **Previous**: [06 — Vision on FPGAs](../vision/06_VISION_ON_FPGA.md)  
-**Next**: [08 — Project Roadmap](../planning/08_ROADMAP.md)
+**Next**: [15 — Learning Path](../vision/15_LEARNING_PATH.md)

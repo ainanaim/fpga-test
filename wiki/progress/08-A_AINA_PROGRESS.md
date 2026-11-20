@@ -1,6 +1,6 @@
 # Aina — Personal FPGA Vision Progress
 
-> Personal progress log for **Aina**. The shared, status-neutral project plan lives in [08 — Project Roadmap](./08_ROADMAP(PROGRESS).md).
+> Personal progress log for **Aina**. The merged project plan (phases + verification layers) lives in [15 — Learning Path](../vision/15_LEARNING_PATH.md).
 
 *Last updated: 2026-11-20*
 
@@ -111,4 +111,4 @@ Once Phase 1 is complete, begin Phase 2 verification in this order:
 4. CSI-2 frame, line, and pixel decoding.
 5. AXI4-Stream data flow through the FIFO to the PS.
 
-See the [shared roadmap](./08_ROADMAP(PROGRESS).md) for the full verification matrix and later phases.
+See the [learning path](../vision/15_LEARNING_PATH.md) for the full verification matrix and later phases.
