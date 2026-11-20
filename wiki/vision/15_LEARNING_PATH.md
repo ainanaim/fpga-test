@@ -71,20 +71,13 @@ reuses.
 - [ ] Run Synthesis → Constraints Wizard (set `sys_clk` = 25 MHz) → save XDC.
 - [ ] Generate Bitstream.
 - [ ] Download via JTAG (Hardware Manager → Auto Connect → Program Device).
-      Confirm the 4 PL LEDs blink once per second.
+      Confirm the 4 PL LEDs blink once per second. (not needed yet)
 - [ ] **Add ILA (§4.9 Method A):** insert ILA IP, 2 probes
       (PROBE0 = 32 bits for `timer_cnt`, PROBE1 = 4 bits for `led`).
-      Rebuild, download, trigger on `timer_cnt == 24999999`.
+      Rebuild, download, trigger on `timer_cnt == 24999999`. (not needed yet)
 - [ ] **Add ILA (§4.9 Method B):** comment out the ILA instantiation, add
       `(* MARK_DEBUG = "true" *)` to `led` and `timer_cnt`, run Set Up Debug
-      wizard, rebuild, download, trigger the same way.
-
-**Why this matters:** `ila_mipi_wrapper.v` is exactly this ILA technique
-applied to the MIPI IP output instead of the LED counter. If you can trigger
-ILA on `timer_cnt`, you can trigger it on `tvalid`.
-
-**Skip:** §4.7 (simulation) for now — you'll learn simulation when a module
-needs it. ILA is the critical skill.
+      wizard, rebuild, download, trigger the same way. (not needed yet)
 
 ---
 
@@ -101,7 +94,7 @@ instantiate it in Verilog. The MIPI CSI-2 Rx IP is added the same way.
       - Note the PLL reset is **active-high**; invert the active-low button.
 - [ ] Add `pll.xdc` (sys_clk AB11, rst_n AA13, clk_out A11).
 - [ ] Generate bitstream, download, probe `clk_out` on J15 pin 3 with an
-      oscilloscope (or just trust the ILA `locked` signal).
+      oscilloscope.
 
 **Why this matters:** the MIPI CSI-2 Rx IP needs multiple clocks (D-PHY ref
 clock, video clock, AXI clock). You'll generate them with the same
@@ -148,7 +141,7 @@ This is where your actual goal lives. Phases 0-1 were just the prerequisite.
       Vitis flow if you haven't done it yet.
 - [ ] Read §10 — Vivado block design for the MIPI Rx IP. Add the IP, connect
       clocks (Clocking Wizard from 25 MHz ref clock), wire the AXI-Stream output.
-- [ ] Read §11 — ILA-based verification. This is exactly what `mipi_verify`
+- [ ] [Optional] Read §11 — ILA-based verification. This is exactly what `mipi_verify`
       implements.
 - [ ] Read §14 — checklist before writing RTL. Go through every box.
 
