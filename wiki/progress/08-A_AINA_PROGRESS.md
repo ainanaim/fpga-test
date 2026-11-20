@@ -12,8 +12,8 @@
 
 - **Current phase:** Phase 1 — MIPI Camera Ingestion
 - **Latest verified result:** `BOOT.bin` boots from SD; the bare-metal app un-gates PS I²C0, initializes `XIicPs`, and reads the OV5647 chip ID (`0x5647`) over I²C `0x36` — confirmed in PuTTY.
-- **Current blocker:** The `mipi_csi2_rx_subsystem_0` is reporting errors — the app is polling and printing the MIPI Rx **Interrupt Status Register (ISR)** to diagnose.
-- **Next milestone:** Clear the ISR errors and confirm MIPI frames reach the PL.
+- **Current blocker:** The `mipi_csi2_rx_subsystem_0` is reporting errors — the app is polling and printing the MIPI Rx **ISR** and image-info registers to diagnose.
+- **Next milestone:** Interpret the ISR / image-info values, confirm MIPI frames reach the PL.
 
 | Phase | Aina's status |
 |-------|---------------|
@@ -65,8 +65,10 @@
 - `main.c` un-gates the PS I²C0 clocks/resets, initializes `XIicPs`, and reads the OV5647 chip ID registers (`0x300A` / `0x300B`) over I²C at `0x36` — PuTTY confirms **`0x5647`**.
 - It then writes the `ov5647_720p_raw10[]` register table to configure **720p RAW10 over 2 MIPI lanes** and triggers stream-on (`0x0100 = 0x01`), before starting the `mipi_csi2_rx_subsystem_0` AXI polling loop.
 
-**Current work — MIPI Rx ISR errors:**
-- The app prints the MIPI CSI-2 Rx **Interrupt Status Register (ISR)** and reads error info from the ISR address to find why no clean video stream is confirmed yet.
+**Current work — decoding MIPI Rx status:**
+- The app prints the MIPI CSI-2 Rx **ISR**, register **`0x60`** (image information 1, VC0), and **`0x64`** (image information 2, VC0); currently working out what the values mean.
+- **Applied — `DPY_LINE_RATE` = `250` Mbps (was `400`):** aligns the receiver's expected bit period with the OV5647's actual ~250 Mbps per-lane rate — Vivado derives the D-PHY timing parameters from this value.
+- **Applied — `C_HS_SETTLE_NS` = `115` (was `175`):** the default `HS_SETTLE` window is too long at 250 Mbps, so the D-PHY receiver misses the SoT sync sequence and raises `ERR_SOT_HS` / `ERR_SOT_SYNC_HS`; `115` ns lands inside the valid settle range.
 
 **Historical note (AXI IIC era, kept for reference):** an earlier revision used the AXI IIC IP, which NACKed `0x36` in bare-metal. The bus pins (AH13/AE13) and NACK conclusions below are historical — the controller is now PS I2C0 via EMIO and I²C reads succeed.
 
@@ -78,24 +80,14 @@
 - MIPI D-PHY signals use **BANK64** at **1.2 V**.
 - Clocking Wizard outputs **200 MHz** for D-PHY and **24 MHz** for XCLK; I²C is now the PS I2C0 peripheral via EMIO (100 kHz, 7-bit addressing).
 
-**UART diagnostics and conclusions:**
-
-| Test | Observed output | Conclusion |
-|------|-----------------|------------|
-| Dynamic I²C (`XIic_DynInit`) | Read from `0x36` failed: no ACK | Dynamic-mode transfer did not reach a responding sensor. |
-| Standard I²C (`XIic_Send`) | `SR = 0x000000C0`; send returned `0` | SCL and SDA are both pulled high and not stuck low, but the transfer did not complete. |
-| Wire-level ISR diagnostic | `ISR: 0xD0 → 0xD6`; `TX_ERROR` bit set | The AXI IIC controller, PL, and AH13/AE13 pins physically drive the bus. Address `0x36` was NACKed; this alone does **not** prove the sensor is awake. |
-
-**Current interpretation:** The FPGA-side I²C path is functional, while the OV5647 is not acknowledging its address in the bare-metal setup. Because the sensor previously responded under Linux, the leading remaining differences to investigate are:
-
-1. **Enable/reset polarity and sequencing:** `cam1_gpio[0]` is fixed at `1`, but the camera may require `0` or a `0 → 1` transition after XCLK stabilizes.
-2. **Linux device-tree configuration:** The working Linux setup may configure camera power/reset GPIOs or clocks differently from the bare-metal design.
+**UART diagnostics (superseded):** the AXI IIC-era tests (`XIic_DynInit`, `XIic_Send`, wire-level ISR) all NACKed `0x36` — that path is replaced by PS I2C0 EMIO + `XIicPs`, which now reads the chip ID successfully.
 
 ### Next Steps
 
 - [x] Read the OV5647 chip ID over bare-metal I²C — `0x5647` confirmed via `XIicPs`.
 - [x] Start streaming — `ov5647_720p_raw10[]` table written, stream-on triggered.
-- [ ] Decode the MIPI Rx ISR error bits and fix the cause (lane state, ECC/CRC errors, packet errors, or sensor config).
+- [x] Apply the `DPY_LINE_RATE=250` / `C_HS_SETTLE_NS=115` fix, rebuild, and re-check the ISR for `ERR_SOT_*` clearance.
+- [ ] Interpret the printed ISR, `0x60`, and `0x64` values (image info VC0) and map them to lane/packet state.
 - [ ] Confirm the sensor is actually sending HS data on the lanes (status registers / scope if available).
 - [ ] Once the stream is clean, check for `frames=N` output in PuTTY.
 - [ ] Confirm the frame counter increments and no I²C or MIPI errors remain.
