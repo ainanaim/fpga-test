@@ -1,7 +1,7 @@
 # FPGA Vision Pipeline — AXU2CGB / OV5647 MIPI
 
 FPGA-based computer vision bring-up on the **ALINX AXU2CGB** (Zynq UltraScale+ ZU2CG).
-Goal: get an **OV5647 MIPI camera** flowing through the FPGA PL, verify with RTL/ILA,
+Goal: get an **OV5647 MIPI camera** flowing through the FPGA PL, verify via UART/PuTTY,
 and connect to PS/DDR software — with clean, reusable RTL that translates to ASIC design.
 
 ## Hardware
@@ -24,7 +24,7 @@ fpga-test/
 │   │   └── mipi2.xdc             Reference — J24 MIPI2 pins
 │   └── rtl/
 │       ├── mipi_verify/          Phase 4 verification modules
-│       │   ├── ila_mipi_wrapper.v  ILA probe wrapper
+│       │   ├── ila_mipi_wrapper.v  Signal probe wrapper (needs JTAG cable)
 │       │   ├── mipi_stats.v        Frame/pixel/line counters
 │       │   └── line_buffer_passthrough.v  AXI-Stream line buffer
 │       └── pipeline/             Vision processing (future)
@@ -59,22 +59,11 @@ Then **File → Open Project** → `vivado/mipi_bringup/mipi_bringup.xpr`
 The script creates the full block design: Zynq PS, Clocking Wizard, MIPI CSI-2 Rx
 Subystem, AXI IIC (SCCB), AXI-Stream FIFO, and loads `mipi1.xdc` automatically.
 
-### 2. One manual step in Vivado
-
-Connect ILA probe ports in the block design diagram (or skip if no JTAG cable yet):
-```
-probe0[31:0]  ← axis_data_fifo_0 m_axis_tdata
-probe1[0]     ← axis_data_fifo_0 m_axis_tvalid
-probe2[0]     ← axis_data_fifo_0 m_axis_tlast
-probe3[0]     ← axis_data_fifo_0 m_axis_tuser[0]
-probe4[0]     ← xlconstant_tready dout
-```
-
-### 3. Build bitstream
+### 2. Build bitstream
 
 **Validate → Synthesis → Implementation → Generate Bitstream → Export Hardware (.xsa)**
 
-### 4. Vitis — write and run the camera init app
+### 3. Vitis — write and run the camera init app
 
 ```
 Platform Project  (from .xsa)
@@ -84,7 +73,7 @@ System Project
   └── Create Boot Image → BOOT.bin → SD card (FAT32)
 ```
 
-### 5. Verify
+### 4. Verify
 
 ```bash
 # PetaLinux / serial console over PuTTY (115200 8N1)
@@ -92,6 +81,11 @@ i2cdetect -y -r 0                              # OV5647 at 0x36
 i2ctransfer -y 0 w2@0x36 0x30 0x0a r1         # → 0x56 (chip ID high)
 i2ctransfer -y 0 w2@0x36 0x30 0x0b r1         # → 0x47 (chip ID low)
 ```
+
+**Next step — MIPI CSI-2 stream check over PuTTY:** boot the `BOOT.bin` from SD,
+watch the UART output (115200 8N1). The app should print `frames=`/`pixels=`
+counters every 500 ms — `STREAMING` with `frames` increasing ~15 per line
+(≈30 fps) confirms the OV5647 → MIPI CSI-2 Rx → AXI-Stream path is working.
 
 ## Current Status
 
@@ -102,8 +96,8 @@ i2ctransfer -y 0 w2@0x36 0x30 0x0b r1         # → 0x47 (chip ID low)
 | Vivado Tcl project script | ✅ Working |
 | OV5647 I²C chip ID (0x5647) | ✅ Confirmed via PetaLinux |
 | Bitstream generation | ✅ Working |
-| Vitis BOOT.bin on SD card | 🔄 In progress |
-| MIPI streaming verification (ILA/UART) | Pending JTAG cable |
+| Vitis BOOT.bin on SD card | ✅ Working |
+| MIPI CSI-2 data stream verification | 🔄 Next step — via UART/PuTTY |
 
 ## Key Docs
 
@@ -119,7 +113,7 @@ i2ctransfer -y 0 w2@0x36 0x30 0x0b r1         # → 0x47 (chip ID low)
 - Vitis 2020.1+ (for PS application development)
 - AXU2CGB board with OV5647 MIPI camera (J23)
 - USB UART cable (MINI USB → PC) for PuTTY
-- JTAG cable (AL321 or compatible 10-pin) — needed for ILA/debugging (not yet available)
+- JTAG cable (AL321 or compatible 10-pin) — for hardware debugging (not yet available)
 - SD card (FAT32) for BOOT.bin boot
 
 ## Toolchain
