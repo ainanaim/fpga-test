@@ -11,9 +11,9 @@
 ## Current Position
 
 - **Current phase:** Phase 1 — MIPI Camera Ingestion
-- **Latest verified result:** `BOOT.bin` boots from SD and runs the bare-metal application, with FSBL and application logs visible over UART.
-- **Current blocker:** The OV5647 NACKs address `0x36` from the bare-metal application. The FPGA-side I²C transmit path is proven working; sensor enable/reset sequencing is now under investigation.
-- **Next milestone:** Read the OV5647 chip ID over bare-metal I²C, then confirm that frames reach the PL.
+- **Latest verified result:** `BOOT.bin` boots from SD; the bare-metal app un-gates PS I²C0, initializes `XIicPs`, and reads the OV5647 chip ID (`0x5647`) over I²C `0x36` — confirmed in PuTTY.
+- **Current blocker:** The `mipi_csi2_rx_subsystem_0` is reporting errors — the app is polling and printing the MIPI Rx **Interrupt Status Register (ISR)** to diagnose.
+- **Next milestone:** Clear the ISR errors and confirm MIPI frames reach the PL.
 
 | Phase | Aina's status |
 |-------|---------------|
@@ -59,15 +59,24 @@
 
 **Vitis 2026.1 note:** Standalone peripheral initialization uses a base address rather than the legacy device ID—for example, `XIic_Initialize(&IicInstance, XPAR_XIIC_0_BASEADDR)`, where the AXI IIC base address is `0xa0010000`.
 
-### 2. Latest UART Results — Camera Connection Under Investigation
+### 2. I²C Resolved — Chip ID Confirmed; Now Debugging MIPI Rx ISR
 
-**Hardware and Vivado checks completed:**
+**Resolved (PS I2C0 EMIO design):**
+- `main.c` un-gates the PS I²C0 clocks/resets, initializes `XIicPs`, and reads the OV5647 chip ID registers (`0x300A` / `0x300B`) over I²C at `0x36` — PuTTY confirms **`0x5647`**.
+- It then writes the `ov5647_720p_raw10[]` register table to configure **720p RAW10 over 2 MIPI lanes** and triggers stream-on (`0x0100 = 0x01`), before starting the `mipi_csi2_rx_subsystem_0` AXI polling loop.
+
+**Current work — MIPI Rx ISR errors:**
+- The app prints the MIPI CSI-2 Rx **Interrupt Status Register (ISR)** and reads error info from the ISR address to find why no clean video stream is confirmed yet.
+
+**Historical note (AXI IIC era, kept for reference):** an earlier revision used the AXI IIC IP, which NACKed `0x36` in bare-metal. The bus pins (AH13/AE13) and NACK conclusions below are historical — the controller is now PS I2C0 via EMIO and I²C reads succeed.
+
+**Hardware checks completed (still valid):**
 - Camera ribbon is connected to **J23 (MIPI0)**; all relevant I/O pins are locked in the implemented design.
 - `cam1_gpio[0]` → **AH14**, currently driven to a constant `1`.
 - `cam1_clk` → **AG13**, driven at **24 MHz**.
 - SCCB/I²C: SCL → **AH13**, SDA → **AE13**, both with pull-ups.
 - MIPI D-PHY signals use **BANK64** at **1.2 V**.
-- Clocking Wizard outputs **200 MHz** for D-PHY and **24 MHz** for XCLK; AXI IIC is configured for **100 kHz**, 7-bit addressing, and a 100 MHz AXI clock.
+- Clocking Wizard outputs **200 MHz** for D-PHY and **24 MHz** for XCLK; I²C is now the PS I2C0 peripheral via EMIO (100 kHz, 7-bit addressing).
 
 **UART diagnostics and conclusions:**
 
@@ -84,19 +93,19 @@
 
 ### Next Steps
 
-- [ ] Inspect the working Linux DTB's `ov5647@36` node and record its clock, enable, and reset configuration.
-- [ ] Make `cam1_gpio[0]` software-controllable instead of tying it to a constant.
-- [ ] After allowing the 24 MHz XCLK to stabilize, test GPIO `0`, `1`, and a timed `0 → 1` transition.
-- [ ] Retry the OV5647 chip-ID read at `0x36` after each sequence.
-- [ ] Once I²C reads succeed, start streaming and check for `frames=N` output in PuTTY.
-- [ ] Confirm the frame counter increments and no I²C errors remain.
+- [x] Read the OV5647 chip ID over bare-metal I²C — `0x5647` confirmed via `XIicPs`.
+- [x] Start streaming — `ov5647_720p_raw10[]` table written, stream-on triggered.
+- [ ] Decode the MIPI Rx ISR error bits and fix the cause (lane state, ECC/CRC errors, packet errors, or sensor config).
+- [ ] Confirm the sensor is actually sending HS data on the lanes (status registers / scope if available).
+- [ ] Once the stream is clean, check for `frames=N` output in PuTTY.
+- [ ] Confirm the frame counter increments and no I²C or MIPI errors remain.
 
 ### Personal Completion Criteria
 
-- The OV5647 acknowledges `0x36` and returns chip ID `0x5647` in the bare-metal application.
-- The sensor responds to the stream-on command.
-- `xil_printf` reports `frames > 0` every 500 ms.
-- No I²C errors are reported.
+- [x] The OV5647 acknowledges `0x36` and returns chip ID `0x5647` in the bare-metal application.
+- [ ] The sensor responds to the stream-on command (registers written; MIPI output not yet confirmed clean).
+- [ ] `xil_printf` reports `frames > 0` every 500 ms.
+- [ ] No I²C or MIPI Rx errors are reported.
 
 ---
 
