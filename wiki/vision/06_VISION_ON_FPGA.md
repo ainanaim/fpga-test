@@ -487,7 +487,7 @@ Limitation: primarily for small networks (MLP, small CNNs) due to FPGA resource 
 | Latency | Acceptable | Must be < 1 frame (16.7 ms @ 60fps) |
 | Memory needed | 1–2 frame buffers | 2–3 frame buffers (ping-pong) |
 | Algorithm freedom | Any algorithm OK | Must be pipelined / streamable |
-| Debugging | Load same image repeatedly | Need ILA or HDMI loopback |
+| Debugging | Load same image repeatedly | Need ILA (optional — requires JTAG cable) or HDMI loopback |
 | ARM software role | Load, trigger, readback | Configure once, then hands-off |
 
 ### Recommended Starting Point
@@ -1142,9 +1142,9 @@ Step 4: Camera → Your Filter → Display
 
 This isolates each failure to a single added component.
 
-### ILA (Integrated Logic Analyzer)
+### ILA (Integrated Logic Analyzer) — optional, requires JTAG cable
 
-The ILA is an on-chip logic analyser that samples internal signals into BRAM, then streams them out over JTAG to Vivado's waveform viewer — no oscilloscope required.
+The ILA is an on-chip logic analyser that samples internal signals into BRAM, then streams them out over JTAG to Vivado's waveform viewer — no oscilloscope required. **Optional for this project** — a JTAG cable is not available yet; UART logging and RTL simulation cover bring-up without it.
 
 ```
 Your design signals ──► ILA core ──► JTAG cable ──► Vivado Hardware Manager
@@ -1222,12 +1222,12 @@ Capture the output `m_tdata` stream, write it to a file, and compare against a r
 
 | Symptom | Likely cause | How to diagnose |
 |---------|-------------|----------------|
-| Blank or all-black display | Pipeline not producing TVALID, or clock not reaching display IP | ILA: check TVALID on display input |
-| Image shifted horizontally or vertically | TLAST or TUSER asserted at wrong pixel | ILA: count TVALID pulses between TLAST edges |
+| Blank or all-black display | Pipeline not producing TVALID, or clock not reaching display IP | ILA (optional, needs JTAG): check TVALID on display input |
+| Image shifted horizontally or vertically | TLAST or TUSER asserted at wrong pixel | ILA (optional, needs JTAG): count TVALID pulses between TLAST edges |
 | Checkerboard / tearing artefacts | Clock domain crossing without synchroniser; FIFO overflow | Add CDC synchroniser; check FIFO almost-full flag |
-| Colour bleed (colours mixed between channels) | Wrong pixel packing / byte ordering | Probe raw pixel values in ILA with colour bars input |
+| Colour bleed (colours mixed between channels) | Wrong pixel packing / byte ordering | Probe raw pixel values in ILA (optional, needs JTAG) with colour bars input |
 | Intermittent glitches | Timing violation at wrong clock | Check timing report; add pipeline register on critical path |
-| Correct output in simulation, wrong on hardware | Uninitialised BRAM, reset issue, or timing closure failure | Check implementation timing report and ILA capture |
+| Correct output in simulation, wrong on hardware | Uninitialised BRAM, reset issue, or timing closure failure | Check implementation timing report and ILA capture (optional, needs JTAG) |
 
 ---
 

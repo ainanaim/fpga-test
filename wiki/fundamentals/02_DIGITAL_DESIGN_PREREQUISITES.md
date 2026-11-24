@@ -328,7 +328,7 @@ If you come from Python/C, these will surprise you:
 | Division is easy | Hardware division is expensive; use multiplication by reciprocal instead |
 | Floating point is default | Fixed-point is the FPGA default; FP requires explicit IP |
 | Functions call and return | Pipelined modules have latency measured in cycles, not returns |
-| Debugging with print() | Debugging uses: synthesis warnings, simulation waveforms, ILA (in-circuit logic analyzer) |
+| Debugging with print() | Debugging uses: synthesis warnings, simulation waveforms, ILA (in-circuit logic analyzer — optional, needs JTAG cable) |
 
 ---
 

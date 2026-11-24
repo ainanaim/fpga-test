@@ -1,8 +1,10 @@
 # Aina — Personal FPGA Vision Progress
 
-> Personal progress log for **Aina**. The shared, status-neutral project plan lives in [08 — Project Roadmap](./08_ROADMAP(PROGRESS).md).
+> Personal progress log for **Aina**. The merged project plan (phases + verification layers) lives in [15 — Learning Path](../vision/15_LEARNING_PATH.md).
 
 *Last updated: 2026-11-24*
+
+> **Design change (2026-11-20):** `create_mipi_bringup.tcl` no longer includes the AXI IIC IP or the ILA. SCCB/I²C is now driven by the Zynq PS **I2C0 peripheral via EMIO** (`cam1_i2c` → AH13/AE13; Vitis uses `xiicps.h` / `XIicPs_*`, base `XPAR_XIICPS_0_*`). The AXI IIC diagnostics below are kept as history — the bus pins and NACK conclusions still apply, but the controller and driver API have changed, so re-verify I²C with `XIicPs` before continuing.
 
 ---
 
@@ -57,6 +59,20 @@
 
 **Vitis 2026.1 note:** Standalone peripheral initialization uses a base address rather than the legacy device ID—for example, `XIic_Initialize(&IicInstance, XPAR_XIIC_0_BASEADDR)`, where the AXI IIC base address is `0xa0010000`.
 
+### 2. I²C Resolved — Chip ID Confirmed; Now Debugging MIPI Rx ISR
+
+**Resolved (PS I2C0 EMIO design):**
+- `main.c` un-gates the PS I²C0 clocks/resets, initializes `XIicPs`, and reads the OV5647 chip ID registers (`0x300A` / `0x300B`) over I²C at `0x36` — PuTTY confirms **`0x5647`**.
+- It then writes the `ov5647_720p_raw10[]` register table to configure **720p RAW10 over 2 MIPI lanes** and triggers stream-on (`0x0100 = 0x01`), before starting the `mipi_csi2_rx_subsystem_0` AXI polling loop.
+
+**Current work — decoding MIPI Rx status:**
+- The app prints the MIPI CSI-2 Rx **ISR**, register **`0x60`** (image information 1, VC0), and **`0x64`** (image information 2, VC0); currently working out what the values mean.
+- **Applied — `DPY_LINE_RATE` = `250` Mbps (was `400`):** aligns the receiver's expected bit period with the OV5647's actual ~250 Mbps per-lane rate — Vivado derives the D-PHY timing parameters from this value.
+- **Applied — `C_HS_SETTLE_NS` = `115` (was `175`):** the default `HS_SETTLE` window is too long at 250 Mbps, so the D-PHY receiver misses the SoT sync sequence and raises `ERR_SOT_HS` / `ERR_SOT_SYNC_HS`; `115` ns lands inside the valid settle range.
+
+**Historical note (AXI IIC era, kept for reference):** an earlier revision used the AXI IIC IP, which NACKed `0x36` in bare-metal. The bus pins (AH13/AE13) and NACK conclusions below are historical — the controller is now PS I2C0 via EMIO and I²C reads succeed.
+
+**Hardware checks completed (still valid):**
 ### 3. Camera Streaming Verified — Valid CSI-2 Packets on PuTTY (2026-11-24)
 
 The bare-metal application now reports live CSI-2 receive statistics over UART:
@@ -84,23 +100,15 @@ The earlier I²C NACK investigation below is kept as history. The report above d
 - `cam1_clk` → **AG13**, driven at **24 MHz**.
 - SCCB/I²C: SCL → **AH13**, SDA → **AE13**, both with pull-ups.
 - MIPI D-PHY signals use **BANK64** at **1.2 V**.
-- Clocking Wizard outputs **200 MHz** for D-PHY and **24 MHz** for XCLK; AXI IIC is configured for **100 kHz**, 7-bit addressing, and a 100 MHz AXI clock.
+- Clocking Wizard outputs **200 MHz** for D-PHY and **24 MHz** for XCLK; I²C is now the PS I2C0 peripheral via EMIO (100 kHz, 7-bit addressing).
 
-**UART diagnostics and conclusions:**
-
-| Test | Observed output | Conclusion |
-|------|-----------------|------------|
-| Dynamic I²C (`XIic_DynInit`) | Read from `0x36` failed: no ACK | Dynamic-mode transfer did not reach a responding sensor. |
-| Standard I²C (`XIic_Send`) | `SR = 0x000000C0`; send returned `0` | SCL and SDA are both pulled high and not stuck low, but the transfer did not complete. |
-| Wire-level ISR diagnostic | `ISR: 0xD0 → 0xD6`; `TX_ERROR` bit set | The AXI IIC controller, PL, and AH13/AE13 pins physically drive the bus. Address `0x36` was NACKed; this alone does **not** prove the sensor is awake. |
-
-**Current interpretation:** The FPGA-side I²C path is functional, while the OV5647 is not acknowledging its address in the bare-metal setup. Because the sensor previously responded under Linux, the leading remaining differences to investigate are:
-
-1. **Enable/reset polarity and sequencing:** `cam1_gpio[0]` is fixed at `1`, but the camera may require `0` or a `0 → 1` transition after XCLK stabilizes.
-2. **Linux device-tree configuration:** The working Linux setup may configure camera power/reset GPIOs or clocks differently from the bare-metal design.
+**UART diagnostics (superseded):** the AXI IIC-era tests (`XIic_DynInit`, `XIic_Send`, wire-level ISR) all NACKed `0x36` — that path is replaced by PS I2C0 EMIO + `XIicPs`, which now reads the chip ID successfully.
 
 ### Next Steps
 
+- [x] Read the OV5647 chip ID over bare-metal I²C — `0x5647` confirmed via `XIicPs`.
+- [x] Start streaming — `ov5647_720p_raw10[]` table written, stream-on triggered.
+- [x] Apply the `DPY_LINE_RATE=250` / `C_HS_SETTLE_NS=115` fix, rebuild, and re-check the ISR for `ERR_SOT_*` clearance.
 - [x] Start streaming and see frame statistics in PuTTY (~29.87 fps, RAW10, 800 B/line).
 - [ ] Record the working sensor enable/reset sequence and register setup.
 - [ ] Confirm the chip-ID read (`0x5647`) over bare-metal I²C and that no I²C errors remain.
@@ -109,10 +117,10 @@ The earlier I²C NACK investigation below is kept as history. The report above d
 
 ### Personal Completion Criteria
 
-- [x] The sensor responds to the stream-on command.
-- [x] `xil_printf` reports frames arriving at ~30 fps.
+- [x] [x] [ ] The sensor responds to the stream-on command (registers written; MIPI output not yet confirmed clean).
+- [ ] [x] `xil_printf` reports frames arriving at ~30 fps.
 - [ ] The OV5647 chip ID `0x5647` is read in the bare-metal application (not recorded in the latest log).
-- [ ] No I²C errors are reported (not recorded in the latest log).
+- [ ] [ ] No I²C or MIPI Rx errors are reported (not recorded in the latest log).
 
 ---
 
@@ -126,4 +134,4 @@ Once Phase 1 is complete, begin Phase 2 verification in this order:
 4. CSI-2 frame, line, and pixel decoding.
 5. AXI4-Stream data flow through the FIFO to the PS.
 
-See the [shared roadmap](./08_ROADMAP(PROGRESS).md) for the full verification matrix and later phases.
+See the [learning path](../vision/15_LEARNING_PATH.md) for the full verification matrix and later phases.

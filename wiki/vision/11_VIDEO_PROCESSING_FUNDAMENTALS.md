@@ -895,12 +895,12 @@ These are the errors that take the most time to debug because simulation often d
 ### 1. TUSER fires more than once per frame
 TUSER must pulse **exactly on the first pixel of a frame**, then stay 0 for the remaining ~2 million cycles. If it fires on 2 pixels, your row counter resets twice, and every row after that is off by one row in the phase of the Bayer filter — output looks like a staircase colour pattern.
 
-**Debug**: Use ILA, trigger on `tuser == 1`, verify it fires exactly once per frame period.
+**Debug**: Use ILA (optional — requires a JTAG cable, not yet available), trigger on `tuser == 1`, verify it fires exactly once per frame period.
 
 ### 2. TLAST fires on the wrong pixel
 TLAST must assert on the **last** pixel of each row (index 1919 for 1080p), not the first or a random one. A row counter that advances at the wrong moment makes every subsequent row's sliding window misaligned — output appears as a horizontal shift or a ghost echo shifted by one pixel.
 
-**Debug**: On ILA, count `TVALID` events between consecutive `TLAST` pulses; it must equal exactly 1920.
+**Debug**: On ILA (optional — requires a JTAG cable, not yet available), count `TVALID` events between consecutive `TLAST` pulses; it must equal exactly 1920.
 
 ### 3. Pipeline control signals not latency-matched
 If the data path is 5-stage pipelined but TVALID/TLAST/TUSER are only 3-stage, the control metadata unlocks from the data — the frame starts/stops at different points than the pixels, which corrupts downstream counters.

@@ -133,7 +133,7 @@
 ## 5. When to Use Which Board
 
 ### Use the **Arty Z7-20** for:
-- Learning Vivado, Verilog, AXI, ILA debugging from scratch
+- Learning Vivado, Verilog, AXI, ILA debugging (optional — needs JTAG cable) from scratch
 - Algorithm prototyping — develop and verify your RTL pipeline here first
 - Running the wiki exercises (Phases 1–3 of the roadmap)
 - Any design that fits within 220 DSPs and 53K LUTs
@@ -226,4 +226,4 @@ Before writing any RTL or buying any peripheral, verify these things in both boa
 ---
 
 **Previous**: [06 — Vision on FPGAs](../vision/06_VISION_ON_FPGA.md)  
-**Next**: [08 — Project Roadmap](../planning/08_ROADMAP.md)
+**Next**: [15 — Learning Path](../vision/15_LEARNING_PATH.md)
