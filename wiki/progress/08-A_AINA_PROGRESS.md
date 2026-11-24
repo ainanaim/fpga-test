@@ -2,21 +2,21 @@
 
 > Personal progress log for **Aina**. The shared, status-neutral project plan lives in [08 — Project Roadmap](./08_ROADMAP(PROGRESS).md).
 
-*Last updated: 2026-11-18*
+*Last updated: 2026-11-24*
 
 ---
 
 ## Current Position
 
-- **Current phase:** Phase 1 — MIPI Camera Ingestion
-- **Latest verified result:** `BOOT.bin` boots from SD and runs the bare-metal application, with FSBL and application logs visible over UART.
-- **Current blocker:** The OV5647 NACKs address `0x36` from the bare-metal application. The FPGA-side I²C transmit path is proven working; sensor enable/reset sequencing is now under investigation.
-- **Next milestone:** Read the OV5647 chip ID over bare-metal I²C, then confirm that frames reach the PL.
+- **Current phase:** Phase 1 — MIPI Camera Ingestion (receive path working; moving to Phase 2 verification)
+- **Latest verified result:** The OV5647 streams and the CSI-2 receive path decodes it. PuTTY shows `WIN: csi=14338 (~29.87 fps) phy=43074/43074 bytes=800 DT=0x2B`.
+- **Current blocker:** None for camera ingestion. The earlier I²C NACK at `0x36` is no longer blocking, since the sensor is configured and streaming.
+- **Next milestone:** Verify CSI→FIFO transport with `mipi_stats` (160 beats/line, 480 lines/frame), then follow the [MIPI to miniDP plan](../vision/16_MIPI_TO_MINIDP_DESIGN_PLAN.md).
 
 | Phase | Aina's status |
 |-------|---------------|
 | Phase 0 — Setup and Board Bring-up | Complete |
-| Phase 1 — MIPI Camera Ingestion | In progress |
+| Phase 1 — MIPI Camera Ingestion | Receive path verified (~30 fps, RAW10, 800 B/line); transport checks pending |
 | Phase 2 — Verification | Not started |
 | Phase 3 — Pixel Processing Core | Not started |
 | Phase 4 — Display / Software Integration | Not started |
@@ -57,7 +57,26 @@
 
 **Vitis 2026.1 note:** Standalone peripheral initialization uses a base address rather than the legacy device ID—for example, `XIic_Initialize(&IicInstance, XPAR_XIIC_0_BASEADDR)`, where the AXI IIC base address is `0xa0010000`.
 
-### 2. Latest UART Results — Camera Connection Under Investigation
+### 3. Camera Streaming Verified — Valid CSI-2 Packets on PuTTY (2026-11-24)
+
+The bare-metal application now reports live CSI-2 receive statistics over UART:
+
+```text
+WIN: csi=14338 (~29.87 fps) phy=43074/43074 bytes=800 DT=0x2B
+```
+
+| Field | Value | Meaning |
+|-------|-------|---------|
+| `csi` | 14338 (~29.87 fps) | CSI-2 frame count / rate in the reporting window; matches the 30 fps VGA mode |
+| `phy` | 43074/43074 | The two PHY counts are equal, so no mismatch is reported |
+| `bytes` | 800 | 640 pixels × 10 bits / 8 = 800 bytes per line, as expected for 640-wide RAW10 |
+| `DT` | `0x2B` | CSI-2 data type for RAW10 |
+
+**Conclusion:** The sensor is configured and streaming, D-PHY lanes are locked, and the receiver decodes RAW10 640-wide lines at about 30 fps. This meets the Phase 1 criteria of frames arriving and no persistent errors.
+
+The earlier I²C NACK investigation below is kept as history. The report above doesn't record what resolved it, so add the final enable/reset sequence here once confirmed.
+
+### 2. Earlier UART Results — Camera Connection Investigation (historical)
 
 **Hardware and Vivado checks completed:**
 - Camera ribbon is connected to **J23 (MIPI0)**; all relevant I/O pins are locked in the implemented design.
@@ -82,19 +101,18 @@
 
 ### Next Steps
 
-- [ ] Inspect the working Linux DTB's `ov5647@36` node and record its clock, enable, and reset configuration.
-- [ ] Make `cam1_gpio[0]` software-controllable instead of tying it to a constant.
-- [ ] After allowing the 24 MHz XCLK to stabilize, test GPIO `0`, `1`, and a timed `0 → 1` transition.
-- [ ] Retry the OV5647 chip-ID read at `0x36` after each sequence.
-- [ ] Once I²C reads succeed, start streaming and check for `frames=N` output in PuTTY.
-- [ ] Confirm the frame counter increments and no I²C errors remain.
+- [x] Start streaming and see frame statistics in PuTTY (~29.87 fps, RAW10, 800 B/line).
+- [ ] Record the working sensor enable/reset sequence and register setup.
+- [ ] Confirm the chip-ID read (`0x5647`) over bare-metal I²C and that no I²C errors remain.
+- [ ] Add `mipi_stats` and AXI GPIO; check 160 beats/line, 480 lines/frame, ~30 SOF/s.
+- [ ] Continue with the [MIPI to miniDP plan](../vision/16_MIPI_TO_MINIDP_DESIGN_PLAN.md).
 
 ### Personal Completion Criteria
 
-- The OV5647 acknowledges `0x36` and returns chip ID `0x5647` in the bare-metal application.
-- The sensor responds to the stream-on command.
-- `xil_printf` reports `frames > 0` every 500 ms.
-- No I²C errors are reported.
+- [x] The sensor responds to the stream-on command.
+- [x] `xil_printf` reports frames arriving at ~30 fps.
+- [ ] The OV5647 chip ID `0x5647` is read in the bare-metal application (not recorded in the latest log).
+- [ ] No I²C errors are reported (not recorded in the latest log).
 
 ---
 

@@ -6,92 +6,108 @@
 //
 //  PURPOSE
 //  -------
-//  Layer 1 of the MIPI data-path verification flow. Counts what it receives
-//  on the MIPI CSI-2 Rx IP's AXI4-Stream output. The single most useful
-//  bring-up module: if the counters behave, the stream is real and complete.
+//  Passive monitor for the existing MIPI CSI-2 Rx to AXI4-Stream FIFO path.
+//  Counts accepted transfers and exposes results through registers that can be
+//  connected to AXI GPIO for UART readout, without requiring an ILA.
 //
 //  COUNTERS
 //  --------
-//    pixel_cnt  : increments on every tvalid cycle (every pixel received)
-//    line_cnt   : increments on every tlast        (every row received)
-//    frame_cnt  : increments on every tuser[0]    (every frame received)
-//    sof_seen   : latched high after the first SOF — proves at least one
-//                 complete frame was observed
+//  All events are qualified by an accepted AXI transfer (tvalid && tready).
+//    beat_cnt         : cumulative accepted AXI beats
+//    pixel_cnt        : cumulative represented pixels (PIXELS_PER_BEAT per beat)
+//    line_cnt         : accepted TLAST events in the current frame
+//    frame_cnt        : cumulative accepted SOF events
+//    beats_last_line  : beats in the most recently completed line
+//    lines_last_frame : lines in the frame preceding the latest SOF
+//    beats_last_frame : beats in the frame preceding the latest SOF
+//    sof_seen         : latched high after the first SOF
 //
-//  WHAT "DATA IS MOVING PROPERLY" LOOKS LIKE  (read via ILA)
-//  ---------------------------------------------------------
-//    frame_cnt  : ticks at the frame rate (~30/s for 30 fps)
-//    line_cnt   : resets to 0 at each SOF, reaches the row count
-//                 (1080 for 1080p, 480 for 800x480, etc.) just before
-//                 the next SOF — proves every row of every frame is received
-//    pixel_cnt  : increments monotonically — proves no pixels are dropped
-//    sof_seen   : goes high on the first frame and stays high
-//
-//  FAILURE MODES THIS MODULE SURFACES
-//  ----------------------------------
-//    line_cnt reaches half the expected value  -> losing rows (tlast misconfig
-//                                                  or tready stall dropping data)
-//    frame_cnt never increments                -> FS short packets not decoded
-//    pixel_cnt never increments                -> tvalid never asserts (link dead)
-//    sof_seen never sets                       -> no SOF received (check VC config)
+//  For 640x480 RAW10 at 4 pixels/clock, a complete frame has 160 beats/line,
+//  480 lines/frame, and 76800 beats/frame. Wait for the second SOF after reset
+//  before using the last-frame results.
 //
 //  CONNECTIONS IN THE BLOCK DESIGN
 //  -------------------------------
-//    [MIPI CSI-2 Rx IP]  m00_axis  ──>  [mipi_stats]  s_axis
-//                                                  │
-//                                                  v
-//                                                [ILA on counters]
+//  Monitor the same signals as the CSI RX -> FIFO connection. The
+//  s_axis_tready input must observe the real FIFO ready output; this module
+//  does not drive ready. Connect selected counters to AXI GPIO for UART readout.
 //
 // =============================================================================
 
 module mipi_stats #(
-    parameter DATA_W = 32,    // MIPI Rx IP TDATA width
-    parameter USER_W = 1,     // TUSER width (bit 0 = SOF)
-    parameter CW     = 32     // counter width — 32 bits holds ~24 h of 200 MHz cycles
+    parameter DATA_W = 40,          // CSI RX AXI4-Stream TDATA width
+    parameter USER_W = 1,           // TUSER width (bit 0 = SOF)
+    parameter PIXELS_PER_BEAT = 4,  // Active pixels in every accepted beat
+    parameter CW     = 32           // Counter width
 ) (
     input  wire              clk,
-    input  wire              rst_n,    // active-low async reset (matches ALINX PL key)
+    input  wire              rst_n,    // active-low async reset
 
-    // AXI4-Stream slave  (from MIPI CSI-2 Rx IP m00_axis)
+    // Passive observation of the CSI RX -> FIFO AXI4-Stream interface
     input  wire [DATA_W-1:0] s_axis_tdata,
     input  wire              s_axis_tvalid,
     input  wire              s_axis_tlast,
     input  wire [USER_W-1:0] s_axis_tuser,
-    output wire              s_axis_tready,
+    input  wire              s_axis_tready,
 
-    // Status counters — attach ILA here
+    // Status counters — connect selected outputs to AXI GPIO
+    output reg [CW-1:0] beat_cnt,
     output reg [CW-1:0] pixel_cnt,
     output reg [CW-1:0] line_cnt,
     output reg [CW-1:0] frame_cnt,
-    output reg          sof_seen
+    output reg          sof_seen,
+    output reg [CW-1:0] beats_last_line,
+    output reg [CW-1:0] lines_last_frame,
+    output reg [CW-1:0] beats_last_frame
 );
-    // During bring-up we always accept — no backpressure.
-    // Replace with a FIFO or downstream-consumer tready when integrating.
-    assign s_axis_tready = 1'b1;
+    reg [CW-1:0] line_beat_cnt;
+    reg [CW-1:0] frame_beat_cnt;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            pixel_cnt <= {CW{1'b0}};
-            line_cnt  <= {CW{1'b0}};
-            frame_cnt <= {CW{1'b0}};
-            sof_seen  <= 1'b0;
+            beat_cnt         <= {CW{1'b0}};
+            pixel_cnt        <= {CW{1'b0}};
+            line_cnt         <= {CW{1'b0}};
+            frame_cnt        <= {CW{1'b0}};
+            sof_seen         <= 1'b0;
+            beats_last_line  <= {CW{1'b0}};
+            lines_last_frame <= {CW{1'b0}};
+            beats_last_frame <= {CW{1'b0}};
+            line_beat_cnt    <= {CW{1'b0}};
+            frame_beat_cnt   <= {CW{1'b0}};
         end
-        else if (s_axis_tvalid) begin
-            // Count every valid pixel cycle.
-            pixel_cnt <= pixel_cnt + 1'b1;
+        else if (s_axis_tvalid && s_axis_tready) begin
+            beat_cnt  <= beat_cnt + 1'b1;
+            pixel_cnt <= pixel_cnt + PIXELS_PER_BEAT;
 
-            // Start of Frame: latch flag, count the frame, reset line counter.
             if (s_axis_tuser[0]) begin
-                sof_seen  <= 1'b1;
-                frame_cnt <= frame_cnt + 1'b1;
-                line_cnt  <= {CW{1'b0}};
-            end
+                // The current beat belongs to the new frame. Results latched
+                // here describe the frame that has just finished.
+                sof_seen         <= 1'b1;
+                frame_cnt        <= frame_cnt + 1'b1;
+                line_cnt         <= s_axis_tlast ? 1'b1 : {CW{1'b0}};
+                lines_last_frame <= line_cnt;
+                beats_last_frame <= frame_beat_cnt;
+                frame_beat_cnt   <= 1'b1;
 
-            // End of Line: count the row.
-            // (Comes after the SOF check so the SOF-driven line_cnt reset wins
-            //  if both tuser and tlast ever coincide on the same cycle.)
-            if (s_axis_tlast) begin
-                line_cnt <= line_cnt + 1'b1;
+                // Recover line counting at SOF even if the previous line was
+                // malformed. Normally the current beat is the first of 160.
+                line_beat_cnt <= s_axis_tlast ? {CW{1'b0}} : 1'b1;
+                if (s_axis_tlast) begin
+                    beats_last_line <= 1'b1;
+                end
+            end
+            else begin
+                frame_beat_cnt <= frame_beat_cnt + 1'b1;
+
+                if (s_axis_tlast) begin
+                    line_cnt        <= line_cnt + 1'b1;
+                    beats_last_line <= line_beat_cnt + 1'b1;
+                    line_beat_cnt   <= {CW{1'b0}};
+                end
+                else begin
+                    line_beat_cnt <= line_beat_cnt + 1'b1;
+                end
             end
         end
     end
