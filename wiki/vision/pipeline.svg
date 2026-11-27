@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" width="1200" height="640" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrowBlue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#ea580c"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="640" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="600" y="40" text-anchor="middle" font-size="22" font-weight="bold" fill="#1e3a5f">OV5647 MIPI Vision Pipeline</text>
+  <text x="600" y="62" text-anchor="middle" font-size="13" fill="#64748b">ALINX AXU2CGB &#183; Zynq UltraScale+ XCZU2CG &#183; Vivado/Vitis 2020.1</text>
+
+  <!-- Chip enclosure -->
+  <rect x="260" y="100" width="720" height="470" rx="14" fill="#fafafa" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="620" y="126" text-anchor="middle" font-size="13" font-weight="bold" fill="#475569">Zynq UltraScale+ XCZU2CG</text>
+
+  <!-- PL domain -->
+  <rect x="280" y="145" width="440" height="400" rx="10" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="300" y="170" font-size="13" font-weight="bold" fill="#1d4ed8">PL &#8212; Programmable Logic</text>
+
+  <!-- PS domain -->
+  <rect x="740" y="145" width="220" height="400" rx="10" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="760" y="170" font-size="13" font-weight="bold" fill="#15803d">PS &#8212; Processing System</text>
+
+  <!-- Camera -->
+  <rect x="60" y="250" width="150" height="120" rx="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5"/>
+  <circle cx="135" cy="272" r="9" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
+  <circle cx="135" cy="272" r="4" fill="#f59e0b"/>
+  <text x="135" y="300" text-anchor="middle" font-size="14" font-weight="bold" fill="#92400e">OV5647</text>
+  <text x="135" y="318" text-anchor="middle" font-size="11" fill="#92400e">MIPI camera</text>
+  <text x="135" y="334" text-anchor="middle" font-size="10.5" fill="#92400e">640&#215;480 RAW10</text>
+
+  <!-- Clocking Wizard -->
+  <rect x="300" y="190" width="170" height="56" rx="8" fill="#ffffff" stroke="#64748b"/>
+  <text x="385" y="213" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#334155">Clocking Wizard</text>
+  <text x="385" y="231" text-anchor="middle" font-size="10.5" fill="#64748b">200 MHz &#183; 24 MHz</text>
+
+  <!-- MIPI CSI-2 Rx -->
+  <rect x="300" y="300" width="160" height="80" rx="8" fill="#ffffff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="380" y="330" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1e3a5f">MIPI CSI-2 Rx</text>
+  <text x="380" y="348" text-anchor="middle" font-size="10.5" fill="#475569">2-lane &#183; RAW10</text>
+  <text x="380" y="364" text-anchor="middle" font-size="10.5" fill="#475569">4 px/clk</text>
+
+  <!-- AXI4-Stream FIFO -->
+  <rect x="540" y="300" width="150" height="80" rx="8" fill="#ffffff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="615" y="330" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e3a5f">AXI4-Stream FIFO</text>
+  <text x="615" y="348" text-anchor="middle" font-size="10.5" fill="#475569">depth 4096</text>
+  <text x="615" y="364" text-anchor="middle" font-size="10.5" fill="#475569">40-bit beats</text>
+
+  <!-- Future vision pipeline -->
+  <rect x="540" y="450" width="150" height="60" rx="8" fill="none" stroke="#94a3b8" stroke-dasharray="5 4"/>
+  <text x="615" y="475" text-anchor="middle" font-size="11.5" fill="#64748b">Vision pipeline</text>
+  <text x="615" y="492" text-anchor="middle" font-size="10.5" fill="#94a3b8">(future)</text>
+
+  <!-- PS blocks -->
+  <rect x="760" y="190" width="180" height="64" rx="8" fill="#ffffff" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="850" y="215" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#14532d">Vitis app</text>
+  <text x="850" y="233" text-anchor="middle" font-size="10.5" fill="#475569">main.c &#183; bare-metal</text>
+
+  <rect x="760" y="300" width="180" height="56" rx="8" fill="#ffffff" stroke="#16a34a"/>
+  <text x="850" y="323" text-anchor="middle" font-size="12" font-weight="bold" fill="#14532d">I2C0 (EMIO)</text>
+  <text x="850" y="341" text-anchor="middle" font-size="10.5" fill="#475569">SCCB master</text>
+
+  <rect x="760" y="400" width="180" height="56" rx="8" fill="#ffffff" stroke="#16a34a"/>
+  <text x="850" y="423" text-anchor="middle" font-size="12" font-weight="bold" fill="#14532d">UART1</text>
+  <text x="850" y="441" text-anchor="middle" font-size="10.5" fill="#475569">MIO 24/25</text>
+
+  <!-- PuTTY -->
+  <rect x="1030" y="400" width="140" height="60" rx="8" fill="#f8fafc" stroke="#64748b"/>
+  <text x="1100" y="425" text-anchor="middle" font-size="12" font-weight="bold" fill="#334155">PuTTY</text>
+  <text x="1100" y="443" text-anchor="middle" font-size="10.5" fill="#64748b">115200 8N1</text>
+
+  <!-- MIPI 2-lane data -->
+  <path d="M210,318 H300" stroke="#2563eb" stroke-width="2.5" fill="none" marker-end="url(#arrowBlue)"/>
+  <path d="M210,332 H300" stroke="#2563eb" stroke-width="2.5" fill="none" marker-end="url(#arrowBlue)"/>
+  <text x="255" y="308" text-anchor="middle" font-size="10" fill="#1d4ed8">MIPI 2-lane</text>
+
+  <!-- CSI -> FIFO -->
+  <path d="M460,340 H540" stroke="#2563eb" stroke-width="2.5" fill="none" marker-end="url(#arrowBlue)"/>
+  <text x="500" y="330" text-anchor="middle" font-size="9.5" fill="#1d4ed8">AXI-Stream</text>
+
+  <!-- FIFO -> future -->
+  <path d="M615,380 V450" stroke="#2563eb" stroke-width="1.8" stroke-dasharray="5 4" fill="none" marker-end="url(#arrowBlue)"/>
+  <text x="622" y="418" font-size="9.5" fill="#64748b">tready = 1 today</text>
+
+  <!-- 200 MHz to CSI -->
+  <path d="M385,246 V300" stroke="#6b7280" stroke-width="1.2" stroke-dasharray="3 3" fill="none" marker-end="url(#arrowGray)"/>
+  <text x="378" y="278" text-anchor="end" font-size="9" fill="#6b7280">200 MHz</text>
+
+  <!-- 24 MHz to camera -->
+  <path d="M300,218 H235 V270 H210" stroke="#6b7280" stroke-width="1.2" stroke-dasharray="3 3" fill="none" marker-end="url(#arrowGray)"/>
+  <text x="267" y="210" text-anchor="middle" font-size="9" fill="#6b7280">24 MHz</text>
+
+  <!-- AXI-Lite control -->
+  <path d="M760,240 H730 V270 H430 V300" stroke="#ea580c" stroke-width="1.6" stroke-dasharray="6 4" fill="none" marker-end="url(#arrowOrange)"/>
+  <text x="575" y="262" text-anchor="middle" font-size="10" fill="#ea580c">AXI-Lite &#183; 0xA000_0000</text>
+
+  <!-- I2C SCCB control -->
+  <path d="M760,328 H730 V520 H225 V352 H210" stroke="#ea580c" stroke-width="1.6" stroke-dasharray="6 4" fill="none" marker-end="url(#arrowOrange)"/>
+  <text x="480" y="512" text-anchor="middle" font-size="10" fill="#ea580c">I2C SCCB &#183; addr 0x36</text>
+
+  <!-- PS internal -->
+  <path d="M850,254 V300" stroke="#6b7280" stroke-width="1.2" fill="none" marker-end="url(#arrowGray)"/>
+  <path d="M940,222 H952 V388 H850 V400" stroke="#6b7280" stroke-width="1.2" fill="none" marker-end="url(#arrowGray)"/>
+
+  <!-- UART out -->
+  <path d="M940,428 H1030" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="6 4" fill="none" marker-end="url(#arrowGray)"/>
+  <text x="985" y="418" text-anchor="middle" font-size="9" fill="#6b7280">USB-UART</text>
+
+  <!-- Legend -->
+  <path d="M60,600 H100" stroke="#2563eb" stroke-width="2.5" fill="none"/>
+  <text x="108" y="604" font-size="10.5" fill="#334155">Data (MIPI / AXI-Stream)</text>
+  <path d="M300,600 H340" stroke="#ea580c" stroke-width="1.6" stroke-dasharray="6 4" fill="none"/>
+  <text x="348" y="604" font-size="10.5" fill="#334155">Control (AXI-Lite / I2C)</text>
+  <path d="M540,600 H580" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="3 3" fill="none"/>
+  <text x="588" y="604" font-size="10.5" fill="#334155">Clock / UART</text>
+  <rect x="720" y="590" width="36" height="20" rx="4" fill="none" stroke="#94a3b8" stroke-dasharray="5 4"/>
+  <text x="764" y="604" font-size="10.5" fill="#334155">Future / planned</text>
+</svg>
