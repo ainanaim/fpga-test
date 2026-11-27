@@ -22,12 +22,13 @@
 //  PG286 Bayer input convention. The MIPI 4px/5B packing in PG232 describes the
 //  CSI-2 packet payload on the wire, not this interface.
 //
-//  OUTPUT FORMAT (RAW8, 4 px/clk, 32 bits = 4 bytes)
+//  OUTPUT FORMAT (RAW8 as Y8 in a 24-bit/pixel stream, 4 px/clk, 96 bits = 12 bytes;
+//  v_frmbuf_wr Y8 reads only component 0 of each pixel, other components are 0)
 //  ------------------------------------------------
 //    m_axis_tdata[7:0]   = pixel 0 [9:2]
-//    m_axis_tdata[15:8]  = pixel 1 [9:2]
-//    m_axis_tdata[23:16] = pixel 2 [9:2]
-//    m_axis_tdata[31:24] = pixel 3 [9:2]
+//    m_axis_tdata[31:24] = pixel 1 [9:2]
+//    m_axis_tdata[55:48] = pixel 2 [9:2]
+//    m_axis_tdata[79:72] = pixel 3 [9:2]
 //
 //  Handshake: single register slice, full throughput when downstream accepts.
 //  tlast / tuser pass through unchanged (line / frame boundaries preserved).
@@ -43,7 +44,7 @@ module raw10_to_raw8 (
     input  wire        s_axis_tlast,
     input  wire        s_axis_tuser,   // bit 0 = SOF
 
-    output wire [31:0] m_axis_tdata,
+    output wire [95:0] m_axis_tdata,
     output wire        m_axis_tvalid,
     input  wire        m_axis_tready,
     output wire        m_axis_tlast,
@@ -51,7 +52,7 @@ module raw10_to_raw8 (
 );
 
     reg        valid_q;
-    reg [31:0] data_q;
+    reg [95:0] data_q;
     reg        last_q;
     reg        user_q;
 
@@ -66,16 +67,16 @@ module raw10_to_raw8 (
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             valid_q <= 1'b0;
-            data_q  <= 32'b0;
+            data_q  <= 96'b0;
             last_q  <= 1'b0;
             user_q  <= 1'b0;
         end
         else if (s_axis_tready) begin
             valid_q <= s_axis_tvalid;
-            data_q  <= {s_axis_tdata[39:32],   // pixel 3 [9:2]
-                        s_axis_tdata[29:22],   // pixel 2 [9:2]
-                        s_axis_tdata[19:12],   // pixel 1 [9:2]
-                        s_axis_tdata[9:2]};    // pixel 0 [9:2]
+            data_q  <= {16'b0, s_axis_tdata[39:32],   // pixel 3 [9:2]
+                        16'b0, s_axis_tdata[29:22],   // pixel 2 [9:2]
+                        16'b0, s_axis_tdata[19:12],   // pixel 1 [9:2]
+                        16'b0, s_axis_tdata[9:2]};    // pixel 0 [9:2]
             last_q  <= s_axis_tlast;
             user_q  <= s_axis_tuser;
         end

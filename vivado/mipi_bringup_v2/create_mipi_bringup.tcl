@@ -21,7 +21,10 @@ set part       xczu2cg-sfvc784-1-e
 # Helper: find IP definition in catalog
 # ---------------------------------------------------------------------------
 proc find_ip {name} {
-    set hits [get_ipdefs -filter "NAME == $name" -all]
+    set hits [get_ipdefs -filter "NAME == $name"]
+    if {[llength $hits] == 0} {
+        set hits [get_ipdefs -filter "NAME == $name" -all]
+    }
     if {[llength $hits] == 0} {
         error "IP '$name' not found — check IP repositories and Vivado version."
     }
@@ -73,6 +76,15 @@ create_bd_design "mipi_bd"
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv [find_ip zynq_ultra_ps_e] zynq_ultra_ps_e_0
 set_property -dict [list \
+    CONFIG.PSU_BANK_0_IO_STANDARD {LVCMOS18} \
+    CONFIG.PSU_BANK_1_IO_STANDARD {LVCMOS18} \
+    CONFIG.PSU_BANK_2_IO_STANDARD {LVCMOS18} \
+    CONFIG.PSU_BANK_3_IO_STANDARD {LVCMOS18} \
+    CONFIG.PSU__SD0__PERIPHERAL__ENABLE {0} \
+    CONFIG.PSU__SD1__GRP_CD__ENABLE {1} \
+    CONFIG.PSU__SD1__PERIPHERAL__ENABLE {1} \
+    CONFIG.PSU__SD1__PERIPHERAL__IO {MIO 46 .. 51} \
+    CONFIG.PSU__SD1__SLOT_TYPE {SD 2.0} \
     CONFIG.PSU__FPGA_PL0_ENABLE                   {1}            \
     CONFIG.PSU__CRL_APB__PL0_REF_CTRL__FREQMHZ    {100}          \
     CONFIG.PSU__USE__M_AXI_GP0                    {1}            \
@@ -84,6 +96,7 @@ set_property -dict [list \
     CONFIG.PSU__UART1__PERIPHERAL__IO             {MIO 24 .. 25} \
     CONFIG.PSU__I2C0__PERIPHERAL__ENABLE          {1}            \
     CONFIG.PSU__I2C0__PERIPHERAL__IO              {EMIO}         \
+    CONFIG.SUBPRESET1 {DDR4_MICRON_MT40A256M16GE_083E} \
 ] [get_bd_cells zynq_ultra_ps_e_0]
 
 # ---------------------------------------------------------------------------
@@ -210,7 +223,7 @@ connect_bd_net [get_bd_pins proc_sys_reset_0/peripheral_aresetn] \
 
 create_bd_cell -type ip -vlnv [find_ip axis_data_fifo] axis_data_fifo_0
 set_property -dict [list \
-    CONFIG.TDATA_NUM_BYTES  {4}    \
+    CONFIG.TDATA_NUM_BYTES  {12}   \
     CONFIG.FIFO_DEPTH       {4096} \
     CONFIG.TUSER_WIDTH      {1}    \
     CONFIG.HAS_TLAST        {1}    \
@@ -322,9 +335,13 @@ assign_bd_address -offset 0xA0010000 -range 0x00010000 \
     [get_bd_addr_segs v_frmbuf_wr_0/s_axi_CTRL/Reg] -force
 
 # frmbuf video writes -> PS DDR via HP0 (frame buffers live in low DDR)
+set ddr_seg [get_bd_addr_segs -quiet zynq_ultra_ps_e_0/SAXIGP2/HP0_DDR_LOW]
+if {[llength $ddr_seg] == 0} {
+    set ddr_seg [get_bd_addr_segs -quiet -filter {NAME =~ "*HP0_DDR_LOW"}]
+}
 assign_bd_address -offset 0x00000000 -range 0x80000000 \
     -target_address_space [get_bd_addr_spaces v_frmbuf_wr_0/Data_m_axi_mm_video] \
-    [get_bd_addr_segs zynq_ultra_ps_e_0/S_AXI_HP0_FPD/HP0_DDR_LOW] -force
+    $ddr_seg -force
 
 # ===========================================================================
 # 4.  Validate, generate products, create wrapper, set top

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(docs.amd.com)",
+      "WebFetch(docs.kernel.org)",
+      "WebFetch(xilinx-wiki.atlassian.net)",
+      "WebFetch(blog.csdn.net)"
+    ]
+  },
+  "$version": 4
+}
