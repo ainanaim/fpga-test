@@ -1,6 +1,6 @@
 # Aina — Personal FPGA Vision Progress
 
-> Personal progress log for **Aina**. The merged project plan (phases + verification layers) lives in [15 — Learning Path](../vision/15_LEARNING_PATH.md).
+> Personal progress log for **Aina**. The project plan lives in [15 — Learning Path](../vision/15_LEARNING_PATH.md).
 
 *Last updated: 2026-11-24*
 
