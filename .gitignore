@@ -18,6 +18,8 @@
 *.xml.bak
 XilinxIP/
 vivado/mipi_bringup/
+minidp_test/vivado/build/
+minidp_test/vitis/workspace/
 *.cache/
 *.hw/
 *.ip_user_files/

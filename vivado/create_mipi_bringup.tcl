@@ -5,6 +5,9 @@
 #  Target part : xczu2cg-sfvc784-1-e
 #  I2C control : Zynq PS I2C0 via EMIO (use xiicps.h in Vitis)
 #  ILA         : Removed
+#  Capture     : Stage A (raw-first) — CSI-2 Rx -> raw10_to_raw8 -> AXIS FIFO
+#                -> v_frmbuf_wr (Y8) -> S_AXI_HP0_FPD -> DDR.
+#                Demosaic is added in Stage B once the raw image is verified.
 # =============================================================================
 
 set script_dir [file dirname [file normalize [info script]]]
@@ -45,6 +48,15 @@ if {[file exists $xdc_path]} {
     puts "WARNING: Constraints file not found at $xdc_path — add mipi1.xdc manually if needed."
 }
 
+# Capture-path RTL (module reference in the block design)
+set rtl_path [file normalize [file join $repo_root src rtl pipeline raw10_to_raw8.v]]
+if {[file exists $rtl_path]} {
+    add_files -norecurse $rtl_path
+    puts "INFO: Added $rtl_path"
+} else {
+    error "Capture RTL not found at $rtl_path — cannot build Stage A capture path."
+}
+
 # ===========================================================================
 # 3.  Block Design
 # ===========================================================================
@@ -56,6 +68,8 @@ create_bd_design "mipi_bd"
 #       UART1 = MIO 24..25 (CP2102 USB-UART)
 #       I2C0  = EMIO       (cam1_i2c -> AH13 SCL / AE13 SDA)
 #       SD1   = MIO 46..51, CD = MIO 45
+#       HP0   = S_AXI_HP0_FPD, 128-bit (frmbuf_wr video writes to DDR)
+#       IRQ0  = pl_ps_irq0 (frmbuf_wr frame-done)
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv [find_ip zynq_ultra_ps_e] zynq_ultra_ps_e_0
 set_property -dict [list \
@@ -63,6 +77,9 @@ set_property -dict [list \
     CONFIG.PSU__CRL_APB__PL0_REF_CTRL__FREQMHZ    {100}          \
     CONFIG.PSU__USE__M_AXI_GP0                    {1}            \
     CONFIG.PSU__MAXIGP0__DATA_WIDTH               {32}           \
+    CONFIG.PSU__USE__S_AXI_GP2                    {1}            \
+    CONFIG.PSU__SAXIGP2__DATA_WIDTH               {128}          \
+    CONFIG.PSU__USE__IRQ0                         {1}            \
     CONFIG.PSU__UART1__PERIPHERAL__ENABLE         {1}            \
     CONFIG.PSU__UART1__PERIPHERAL__IO             {MIO 24 .. 25} \
     CONFIG.PSU__I2C0__PERIPHERAL__ENABLE          {1}            \
@@ -130,10 +147,11 @@ connect_bd_net [get_bd_pins proc_sys_reset_0/peripheral_aresetn] \
     [get_bd_pins mipi_csi2_rx_subsystem_0/video_aresetn]
 
 # ---------------------------------------------------------------------------
-# 3e.  AXI Interconnect (PS -> MIPI CSI-2 Rx csirxss_s_axi)
+# 3e.  AXI Interconnect (PS -> CSI-2 Rx csirxss_s_axi + frmbuf_wr s_axi_CTRL)
+#      M01_AXI is connected in 3g once v_frmbuf_wr_0 exists.
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv [find_ip axi_interconnect] axi_interconnect_0
-set_property CONFIG.NUM_MI {1} [get_bd_cells axi_interconnect_0]
+set_property CONFIG.NUM_MI {2} [get_bd_cells axi_interconnect_0]
 
 connect_bd_intf_net \
     [get_bd_intf_pins zynq_ultra_ps_e_0/M_AXI_HPM0_FPD] \
@@ -164,30 +182,118 @@ connect_bd_intf_net \
     [get_bd_intf_ports cam1_i2c]
 
 # ---------------------------------------------------------------------------
-# 3g.  AXI4-Stream Data FIFO (5 bytes per pixel for RAW10)
+# 3g.  Stage A capture path:
+#      CSI video_out (RAW10, 4 px/clk, per-pixel 10-bit fields, 5 B/beat)
+#        -> raw10_to_raw8 (drop 2 LSBs -> RAW8, 4 B/beat)
+#        -> AXI4-Stream FIFO (elasticity against frmbuf/DDR back-pressure)
+#        -> v_frmbuf_wr (Y8, 640x480) -> S_AXI_HP0_FPD -> DDR
+#      video_out is NOT MIPI wire packing: pixels arrive as zero-padded 10-bit
+#      fields (same convention as PG286 demosaic inputs), so Stage B at 10-bit
+#      can connect demosaic directly; this module is the 8-bit down-converter.
 # ---------------------------------------------------------------------------
+create_bd_cell -type module -reference raw10_to_raw8 raw10_to_raw8_0
+
+connect_bd_net [get_bd_pins mipi_csi2_rx_subsystem_0/video_out_tdata] \
+    [get_bd_pins raw10_to_raw8_0/s_axis_tdata]
+connect_bd_net [get_bd_pins mipi_csi2_rx_subsystem_0/video_out_tvalid] \
+    [get_bd_pins raw10_to_raw8_0/s_axis_tvalid]
+connect_bd_net [get_bd_pins raw10_to_raw8_0/s_axis_tready] \
+    [get_bd_pins mipi_csi2_rx_subsystem_0/video_out_tready]
+connect_bd_net [get_bd_pins mipi_csi2_rx_subsystem_0/video_out_tlast] \
+    [get_bd_pins raw10_to_raw8_0/s_axis_tlast]
+connect_bd_net [get_bd_pins mipi_csi2_rx_subsystem_0/video_out_tuser] \
+    [get_bd_pins raw10_to_raw8_0/s_axis_tuser]
+connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_clk0] \
+    [get_bd_pins raw10_to_raw8_0/clk]
+connect_bd_net [get_bd_pins proc_sys_reset_0/peripheral_aresetn] \
+    [get_bd_pins raw10_to_raw8_0/rst_n]
+
 create_bd_cell -type ip -vlnv [find_ip axis_data_fifo] axis_data_fifo_0
 set_property -dict [list \
-    CONFIG.TDATA_NUM_BYTES  {5}    \
+    CONFIG.TDATA_NUM_BYTES  {4}    \
     CONFIG.FIFO_DEPTH       {4096} \
     CONFIG.TUSER_WIDTH      {1}    \
     CONFIG.HAS_TLAST        {1}    \
 ] [get_bd_cells axis_data_fifo_0]
 
-connect_bd_intf_net \
-    [get_bd_intf_pins mipi_csi2_rx_subsystem_0/video_out] \
-    [get_bd_intf_pins axis_data_fifo_0/S_AXIS]
+connect_bd_net [get_bd_pins raw10_to_raw8_0/m_axis_tdata] \
+    [get_bd_pins axis_data_fifo_0/s_axis_tdata]
+connect_bd_net [get_bd_pins raw10_to_raw8_0/m_axis_tvalid] \
+    [get_bd_pins axis_data_fifo_0/s_axis_tvalid]
+connect_bd_net [get_bd_pins axis_data_fifo_0/s_axis_tready] \
+    [get_bd_pins raw10_to_raw8_0/m_axis_tready]
+connect_bd_net [get_bd_pins raw10_to_raw8_0/m_axis_tlast] \
+    [get_bd_pins axis_data_fifo_0/s_axis_tlast]
+connect_bd_net [get_bd_pins raw10_to_raw8_0/m_axis_tuser] \
+    [get_bd_pins axis_data_fifo_0/s_axis_tuser]
 
 connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_clk0] \
     [get_bd_pins axis_data_fifo_0/s_axis_aclk]
 connect_bd_net [get_bd_pins proc_sys_reset_0/peripheral_aresetn] \
     [get_bd_pins axis_data_fifo_0/s_axis_aresetn]
 
-create_bd_cell -type ip -vlnv [find_ip xlconstant] xlconstant_tready
-set_property -dict [list CONFIG.CONST_WIDTH {1} CONFIG.CONST_VAL {1}] \
-    [get_bd_cells xlconstant_tready]
-connect_bd_net [get_bd_pins xlconstant_tready/dout] \
-    [get_bd_pins axis_data_fifo_0/m_axis_tready]
+# --- Video Frame Buffer Write (Y8 mono: RAW8 Bayer bytes, stride 640) ---
+create_bd_cell -type ip -vlnv [find_ip v_frmbuf_wr] v_frmbuf_wr_0
+set_property -dict [list \
+    CONFIG.SAMPLES_PER_CLOCK             {4}   \
+    CONFIG.MAX_DATA_WIDTH                {8}   \
+    CONFIG.MAX_COLS                      {640} \
+    CONFIG.MAX_ROWS                      {480} \
+    CONFIG.AXIMM_DATA_WIDTH              {128} \
+    CONFIG.C_M_AXI_MM_VIDEO_DATA_WIDTH   {128} \
+    CONFIG.HAS_Y8                        {1}   \
+    CONFIG.HAS_RGB8                      {0}   \
+    CONFIG.HAS_YUYV8                     {0}   \
+    CONFIG.HAS_UYVY8                     {0}   \
+] [get_bd_cells v_frmbuf_wr_0]
+
+connect_bd_intf_net \
+    [get_bd_intf_pins axis_data_fifo_0/M_AXIS] \
+    [get_bd_intf_pins v_frmbuf_wr_0/s_axis_video]
+connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_clk0] \
+    [get_bd_pins v_frmbuf_wr_0/ap_clk]
+connect_bd_net [get_bd_pins proc_sys_reset_0/peripheral_aresetn] \
+    [get_bd_pins v_frmbuf_wr_0/ap_rst_n]
+
+# AXI-Lite control (M01 of the control interconnect)
+connect_bd_intf_net \
+    [get_bd_intf_pins axi_interconnect_0/M01_AXI] \
+    [get_bd_intf_pins v_frmbuf_wr_0/s_axi_CTRL]
+connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_clk0] \
+    [get_bd_pins axi_interconnect_0/M01_ACLK]
+connect_bd_net [get_bd_pins proc_sys_reset_0/peripheral_aresetn] \
+    [get_bd_pins axi_interconnect_0/M01_ARESETN]
+
+# --- Video memory path: frmbuf MM master -> HP0 -> DDR ---
+create_bd_cell -type ip -vlnv [find_ip axi_interconnect] axi_interconnect_1
+set_property -dict [list CONFIG.NUM_SI {1} CONFIG.NUM_MI {1}] \
+    [get_bd_cells axi_interconnect_1]
+connect_bd_intf_net \
+    [get_bd_intf_pins v_frmbuf_wr_0/m_axi_mm_video] \
+    [get_bd_intf_pins axi_interconnect_1/S00_AXI]
+connect_bd_intf_net \
+    [get_bd_intf_pins axi_interconnect_1/M00_AXI] \
+    [get_bd_intf_pins zynq_ultra_ps_e_0/S_AXI_HP0_FPD]
+foreach port {ACLK S00_ACLK M00_ACLK} {
+    connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_clk0] \
+        [get_bd_pins axi_interconnect_1/$port]
+}
+connect_bd_net [get_bd_pins proc_sys_reset_0/interconnect_aresetn] \
+    [get_bd_pins axi_interconnect_1/ARESETN]
+foreach port {S00_ARESETN M00_ARESETN} {
+    connect_bd_net [get_bd_pins proc_sys_reset_0/peripheral_aresetn] \
+        [get_bd_pins axi_interconnect_1/$port]
+}
+connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_clk0] \
+    [get_bd_pins zynq_ultra_ps_e_0/saxihp0_fpd_aclk]
+
+# --- Frame-done interrupt -> PS (for fb= frame counting / FPS measurement) ---
+create_bd_cell -type ip -vlnv [find_ip xlconcat] xlconcat_0
+set_property CONFIG.NUM_PORTS {1} [get_bd_cells xlconcat_0]
+connect_bd_net [get_bd_pins v_frmbuf_wr_0/interrupt] \
+    [get_bd_pins xlconcat_0/In0]
+connect_bd_net [get_bd_pins xlconcat_0/dout] \
+    [get_bd_pins zynq_ultra_ps_e_0/pl_ps_irq0]
 
 # ---------------------------------------------------------------------------
 # 3h.  CAM1 CLK output (24 MHz -> AG13)
@@ -211,6 +317,15 @@ assign_bd_address -offset 0xA0000000 -range 0x00010000 \
     -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] \
     [get_bd_addr_segs mipi_csi2_rx_subsystem_0/csirxss_s_axi/Reg] -force
 
+assign_bd_address -offset 0xA0010000 -range 0x00010000 \
+    -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] \
+    [get_bd_addr_segs v_frmbuf_wr_0/s_axi_CTRL/Reg] -force
+
+# frmbuf video writes -> PS DDR via HP0 (frame buffers live in low DDR)
+assign_bd_address -offset 0x00000000 -range 0x80000000 \
+    -target_address_space [get_bd_addr_spaces v_frmbuf_wr_0/Data_m_axi_mm_video] \
+    [get_bd_addr_segs zynq_ultra_ps_e_0/S_AXI_HP0_FPD/HP0_DDR_LOW] -force
+
 # ===========================================================================
 # 4.  Validate, generate products, create wrapper, set top
 # ===========================================================================
@@ -228,4 +343,6 @@ save_bd_design
 puts "============================================================"
 puts " Project created cleanly at: $proj_dir/mipi_bringup.xpr"
 puts " PS I2C0 (EMIO) -> cam1_i2c, CAM1_CLK -> clk_out2, no ILA"
+puts " Stage A capture: CSI -> raw10_to_raw8 -> FIFO -> frmbuf(Y8)"
+puts "   -> HP0 -> DDR; frmbuf IRQ -> pl_ps_irq0; CTRL @ 0xA0010000"
 puts "============================================================"
