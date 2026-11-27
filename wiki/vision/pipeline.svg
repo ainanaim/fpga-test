@@ -72,10 +72,19 @@
   <text x="850" y="423" text-anchor="middle" font-size="12" font-weight="bold" fill="#14532d">UART1</text>
   <text x="850" y="441" text-anchor="middle" font-size="10.5" fill="#475569">MIO 24/25</text>
 
+  <rect x="760" y="480" width="180" height="50" rx="8" fill="#ffffff" stroke="#16a34a"/>
+  <text x="850" y="500" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#14532d">SD1 &#183; MIO 46..51</text>
+  <text x="850" y="517" text-anchor="middle" font-size="9.5" fill="#475569">BOOT.bin &#8594; main.c</text>
+
   <!-- PuTTY -->
   <rect x="1030" y="400" width="140" height="60" rx="8" fill="#f8fafc" stroke="#64748b"/>
   <text x="1100" y="425" text-anchor="middle" font-size="12" font-weight="bold" fill="#334155">PuTTY</text>
   <text x="1100" y="443" text-anchor="middle" font-size="10.5" fill="#64748b">115200 8N1</text>
+
+  <!-- SD card -->
+  <rect x="1030" y="480" width="140" height="60" rx="8" fill="#f8fafc" stroke="#64748b"/>
+  <text x="1100" y="505" text-anchor="middle" font-size="12" font-weight="bold" fill="#334155">SD card</text>
+  <text x="1100" y="523" text-anchor="middle" font-size="10.5" fill="#64748b">FAT32 &#183; BOOT.bin</text>
 
   <!-- MIPI 2-lane data -->
   <path d="M210,318 H300" stroke="#2563eb" stroke-width="2.5" fill="none" marker-end="url(#arrowBlue)"/>
@@ -114,13 +123,17 @@
   <path d="M940,428 H1030" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="6 4" fill="none" marker-end="url(#arrowGray)"/>
   <text x="985" y="418" text-anchor="middle" font-size="9" fill="#6b7280">USB-UART</text>
 
+  <!-- SD boot -->
+  <path d="M1030,510 H940" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="6 4" fill="none" marker-end="url(#arrowGray)"/>
+  <text x="985" y="500" text-anchor="middle" font-size="9" fill="#6b7280">boot</text>
+
   <!-- Legend -->
   <path d="M60,600 H100" stroke="#2563eb" stroke-width="2.5" fill="none"/>
   <text x="108" y="604" font-size="10.5" fill="#334155">Data (MIPI / AXI-Stream)</text>
   <path d="M300,600 H340" stroke="#ea580c" stroke-width="1.6" stroke-dasharray="6 4" fill="none"/>
   <text x="348" y="604" font-size="10.5" fill="#334155">Control (AXI-Lite / I2C)</text>
   <path d="M540,600 H580" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="3 3" fill="none"/>
-  <text x="588" y="604" font-size="10.5" fill="#334155">Clock / UART</text>
+  <text x="588" y="604" font-size="10.5" fill="#334155">Clock / UART / SD boot</text>
   <rect x="720" y="590" width="36" height="20" rx="4" fill="none" stroke="#94a3b8" stroke-dasharray="5 4"/>
   <text x="764" y="604" font-size="10.5" fill="#334155">Future / planned</text>
 </svg>
